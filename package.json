@@ -1,0 +1,60 @@
+{
+  "name": "nuxt-native",
+  "version": "0.1.0",
+  "description": "Build real native iOS & Android apps with Nuxt and Vue — no WebView. A Flutter/React Native-style framework for the Nuxt ecosystem, powered by NativeScript's native runtime.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/types.d.mts",
+      "import": "./dist/module.mjs"
+    }
+  },
+  "main": "./dist/module.mjs",
+  "types": "./dist/types.d.mts",
+  "bin": {
+    "nuxt-native": "./bin/nuxt-native.mjs"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "cli"
+  ],
+  "scripts": {
+    "prepack": "nuxt-module-build build",
+    "dev": "nuxi dev playground",
+    "dev:build": "nuxi build playground",
+    "dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxi prepare playground",
+    "native:init": "node ./bin/nuxt-native.mjs init",
+    "native:dev:ios": "node ./bin/nuxt-native.mjs dev ios",
+    "native:dev:android": "node ./bin/nuxt-native.mjs dev android",
+    "lint": "eslint .",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nuxt/kit": "^4.0.0",
+    "defu": "^6.1.4"
+  },
+  "peerDependencies": {
+    "@nativescript/core": "^9.0.0",
+    "nativescript-vue": "^3.0.0",
+    "nuxt": "^4.0.0"
+  },
+  "devDependencies": {
+    "@nativescript/camera": "^7.0.0",
+    "@nativescript/core": "^9.1.2",
+    "@nativescript/geolocation": "^9.0.0",
+    "@nuxt/eslint-config": "^1.0.0",
+    "@nuxt/module-builder": "^1.0.3",
+    "@nuxt/schema": "^4.0.0",
+    "@types/node": "^22.0.0",
+    "eslint": "^9.0.0",
+    "nativescript": "^9.1.1",
+    "nativescript-vue": "^3.1.2",
+    "nuxt": "^4.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.0.0",
+    "vue-tsc": "^2.0.0"
+  }
+}

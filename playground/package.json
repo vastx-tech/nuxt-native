@@ -1,0 +1,11 @@
+{
+  "name": "nuxt-native-playground",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxi dev",
+    "native:init": "node ../bin/nuxt-native.mjs init",
+    "native:dev:ios": "node ../bin/nuxt-native.mjs dev ios",
+    "native:dev:android": "node ../bin/nuxt-native.mjs dev android"
+  }
+}
