@@ -47,13 +47,31 @@ tradeoff React Native and Flutter made, applied to the Nuxt/Vue ecosystem.
 ## Quickstart
 
 > **Not on npm yet.** `nuxt-native` hasn't been published to the npm
-> registry, so install it straight from this repo instead of `npm install
-> nuxt-native` — that command will 404 (or worse, install an unrelated
-> package if that name is ever taken by someone else).
+> registry, so every command below installs straight from this repo
+> instead — `npm install nuxt-native` on its own will 404 (or worse,
+> install an unrelated package if that name is ever taken by someone
+> else).
+
+One command, empty directory to a project with dependencies installed and
+native platforms wired up:
 
 ```bash
-npx nuxi init my-app
+npx github:vastx-tech/nuxt-native create my-app --app-id com.example.myapp
 cd my-app
+npx nuxt-native dev android   # or: ios
+```
+
+`create` scaffolds `nuxt.config.ts`, a starter `app/pages/index.vue` +
+`app/pages/details/[id].vue` demonstrating navigation, runs `npm install`,
+writes `nativescript.config.ts`, and runs `ns platform add` for each
+platform (`--platforms ios,android`, defaults to both). Verified end-to-end
+from a clean directory via `npx`; the only step it can't do for you is
+provide an actual Android SDK / Xcode install — `ns platform add` will
+tell you clearly if either is missing.
+
+Adding it to an **existing** Nuxt project instead:
+
+```bash
 npm install github:vastx-tech/nuxt-native nativescript-vue @nativescript/core
 ```
 
