@@ -71,3 +71,9 @@ dependency between a Nuxt-hooked build step and a standalone CLI process.
 4. Port more of Nuxt's file-based routing conventions (route groups,
    layouts-equivalent) into `generate-routes.ts`/`scan-pages.mjs`.
 5. CI: a real device-farm or simulator smoke test, once (1) is verified.
+6. Publish to npm once (1)-(3) are further along. Until then, install from
+   `github:vastx-tech/nuxt-native` (see README) — that install path only
+   works at all because `package.json` has a `prepare` script that runs
+   `nuxt-module-build build`; `npm install`'s git-dependency flow runs
+   `prepare`, not `prepack` (verified by installing the pushed repo into a
+   scratch project and checking what actually landed in `node_modules`).

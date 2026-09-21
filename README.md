@@ -46,10 +46,15 @@ tradeoff React Native and Flutter made, applied to the Nuxt/Vue ecosystem.
 
 ## Quickstart
 
+> **Not on npm yet.** `nuxt-native` hasn't been published to the npm
+> registry, so install it straight from this repo instead of `npm install
+> nuxt-native` — that command will 404 (or worse, install an unrelated
+> package if that name is ever taken by someone else).
+
 ```bash
 npx nuxi init my-app
 cd my-app
-npm install nuxt-native nativescript-vue @nativescript/core
+npm install github:vastx-tech/nuxt-native nativescript-vue @nativescript/core
 ```
 
 ```ts
