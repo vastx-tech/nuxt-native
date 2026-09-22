@@ -9,7 +9,16 @@ export function packageJson(appName) {
     {
       name: appName,
       private: true,
-      type: 'module',
+      // Deliberately NOT "type": "module". This project's own generated
+      // files (webpack.config.cjs, .nuxt-native/app.js — the latter only
+      // ever consumed through webpack's own module system, never Node's)
+      // don't need it, but NativeScript's Android runtime ships plain
+      // CommonJS build tooling under platforms/android/build-tools/ that
+      // does — those files have no closer package.json of their own, so
+      // Node resolves their module type from THIS one. With "type":
+      // "module" set, Node treats that vendored CommonJS script as ESM
+      // too and `require` throws `ReferenceError: require is not defined`
+      // — reproduced by a real user's `ns run android` deploy step.
       // Fallback only: nativescript.config.ts's own `main` field (set by
       // ensureNativeScriptConfig) is checked first by
       // @nativescript/webpack's getEntryPath() — this covers the case
