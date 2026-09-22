@@ -71,10 +71,33 @@ import Initial from ${JSON.stringify(initial.file)}
 `
 }
 
+// The Nuxt module's addComponentsDir() registers <NPage>/<NActionBar>/
+// <NTabs> globally for Nuxt's own build (editor DX, vue-tsc) — the native
+// webpack build never goes through that, so nothing registers them there
+// at all. Global .component() calls here are nativescript-vue's
+// equivalent: the same mechanism Nuxt itself ultimately relies on
+// (Vue's app-level component registry), just invoked directly instead of
+// through Nuxt's auto-import codegen.
+const RUNTIME_COMPONENTS = [
+  { tag: 'NPage', specifier: 'nuxt-native/runtime/components/NPage.vue' },
+  { tag: 'NActionBar', specifier: 'nuxt-native/runtime/components/NActionBar.vue' },
+  { tag: 'NTabs', specifier: 'nuxt-native/runtime/components/NTabs.vue' }
+]
+
 function renderAppEntry() {
+  const imports = RUNTIME_COMPONENTS
+    .map(({ tag, specifier }) => `import ${tag} from ${JSON.stringify(specifier)}`)
+    .join('\n')
+  const registrations = RUNTIME_COMPONENTS
+    .map(({ tag }) => `  .component(${JSON.stringify(tag)}, ${tag})`)
+    .join('\n')
+
   return `import { createApp } from 'nativescript-vue'
 import RootFrame from './root-frame.vue'
+${imports}
 
-createApp(RootFrame).start()
+createApp(RootFrame)
+${registrations}
+  .start()
 `
 }

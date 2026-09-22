@@ -8,7 +8,8 @@
     ".": {
       "types": "./dist/types.d.mts",
       "import": "./dist/module.mjs"
-    }
+    },
+    "./runtime/*": "./dist/runtime/*"
   },
   "main": "./dist/module.mjs",
   "types": "./dist/types.d.mts",
