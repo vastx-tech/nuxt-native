@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { loadNativeConfig } from '../lib/load-config.mjs'
 import { ensureNativeScriptConfig } from '../lib/nativescript-config.mjs'
@@ -24,6 +25,19 @@ export async function init({ platforms } = {}) {
   console.log('[nuxt-native] Generated .nuxt-native/ bootstrap from app/pages')
 
   for (const platform of targets) {
+    // `ns platform add` exits non-zero when the platform is already added
+    // (reproduced directly: a real project where `platform add android` had
+    // already been run once — rerunning it printed "Platform android
+    // already added" and still exited with code 127) — run()'s exit-code
+    // check can't tell that apart from a real failure, so it would abort
+    // init() here every time, before ever reaching applySplashBranding()
+    // below. `nuxt-native init` is supposed to be safe to rerun on a
+    // project in any state, so check for the platform's own directory
+    // first instead of relying on the CLI's exit code for this case.
+    if (existsSync(join(process.cwd(), 'platforms', platform))) {
+      console.log(`[nuxt-native] platforms/${platform} already exists, skipping ns platform add`)
+      continue
+    }
     console.log(`[nuxt-native] ns platform add ${platform} (scaffolds App_Resources on first run)`)
     await run('npx', ['--yes', 'nativescript', 'platform', 'add', platform])
   }
