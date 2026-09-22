@@ -3,7 +3,12 @@
     <NActionBar v-if="title || $slots.actionBar" :title="title">
       <slot name="actionBar" />
     </NActionBar>
-    <GridLayout :style="contentStyle">
+    <ScrollView v-if="scrollable" orientation="vertical">
+      <GridLayout :style="contentStyle">
+        <slot />
+      </GridLayout>
+    </ScrollView>
+    <GridLayout v-else :style="contentStyle">
       <slot />
     </GridLayout>
   </Page>
@@ -14,7 +19,9 @@ import { computed } from 'vue'
 import { useSafeArea } from '../composables/useSafeArea'
 import NActionBar from './NActionBar.vue'
 
-defineProps<{ title?: string }>()
+withDefaults(defineProps<{ title?: string, scrollable?: boolean }>(), {
+  scrollable: true
+})
 
 const insets = useSafeArea()
 const contentStyle = computed(() => ({
