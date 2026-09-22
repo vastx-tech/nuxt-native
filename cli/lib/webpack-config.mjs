@@ -27,16 +27,35 @@ export const WEBPACK_CONFIG_FILENAME = 'webpack.config.cjs'
  * lets composables written as `import { ref } from 'vue'` resolve
  * correctly in the on-device bundle). Without this file, `.vue` pages have
  * no loader at all and webpack fails immediately on the first import.
+ *
+ * The `#build/nuxt-native/route-manifest.mjs` alias: useNativeRouter.ts
+ * (nuxt-native's own composable) imports its route table from that exact
+ * specifier — `#build` is a Nuxt-internal alias Nuxt's OWN Vite/webpack
+ * build registers, resolving to `.nuxt/`. The native build never goes
+ * through Nuxt's builder at all, so that alias doesn't exist here —
+ * reproduced directly: `Module not found: Can't resolve
+ * '#build/nuxt-native/route-manifest.mjs'`. Aliasing the same literal
+ * specifier to this project's own CLI-generated `.nuxt-native/
+ * route-manifest.mjs` lets the identical composable source resolve
+ * correctly in both contexts without forking it.
  */
 export function ensureWebpackConfig(projectRoot) {
   const configPath = join(projectRoot, WEBPACK_CONFIG_FILENAME)
   if (existsSync(configPath)) return configPath
 
-  writeFileSync(configPath, `const webpack = require('@nativescript/webpack')
+  writeFileSync(configPath, `const path = require('path')
+const webpack = require('@nativescript/webpack')
 
 module.exports = (env) => {
   webpack.init(env)
   require('nativescript-vue/nativescript.webpack')(webpack)
+
+  webpack.chainWebpack((config) => {
+    config.resolve.alias.set(
+      '#build/nuxt-native/route-manifest.mjs$',
+      path.resolve(__dirname, '.nuxt-native/route-manifest.mjs')
+    )
+  })
 
   return webpack.resolveConfig()
 }
