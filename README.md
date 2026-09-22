@@ -53,6 +53,10 @@ tradeoff React Native and Flutter made, applied to the Nuxt/Vue ecosystem.
   `class="flex-col items-center gap-4 bg-indigo-600 rounded-lg p-3"` on an
   `<NFlex>` or any UI kit component works the same way it would on web. See
   [UI kit](#ui-kit) below for what's in scope and why.
+- **Familiar HTML tag names** — `<div>`, `<p>`, `<img>`, `<input>`,
+  `<h1>`–`<h6>` compile straight to real native views, no import needed. See
+  [HTML tag names](#html-tag-names) below for the full mapping and what it
+  deliberately doesn't attempt.
 - **Pinia, as a first-class citizen** — install `pinia` and `nuxt-native
   init`/`create` wires `createPinia()` into the app bootstrap automatically.
   See [State management (Pinia)](#state-management-pinia) below.
@@ -211,6 +215,59 @@ the same CSS parser `@nativescript/webpack` uses) — see
 [ARCHITECTURE.md](./ARCHITECTURE.md) for the full trail, including why this
 ships Android-first with iOS's `<FlexboxLayout>` performance deliberately
 left to a real on-device benchmark before it's the default there too.
+
+## HTML tag names
+
+Common HTML tags compile straight to real native views — no Vue component
+wrapper needed, no import:
+
+```vue
+<template>
+  <NPage title="Article">
+    <div class="p-5 gap-2">
+      <h1>Nuxt Native</h1>
+      <p>A real paragraph of wrapping text, styled with Tailwind.</p>
+      <p><strong>Bold</strong> and <em>italic</em> both work inline-ish.</p>
+      <img src="https://example.com/cover.png" />
+      <input v-model="query" placeholder="Search" />
+      <a @tap="openDocs">Read the docs</a>
+      <button @tap="openDocs">Native button</button>
+    </div>
+  </NPage>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+const query = ref('')
+function openDocs() { /* ... */ }
+</script>
+```
+
+`div`→`StackLayout`, `p`/`h1`–`h6`→`Label` (bold + sized for headings),
+`img`→`Image`, `input`→`TextField` (`v-model` works — see below),
+`a`/`strong`/`b`/`em`/`i`→styled `Label`s, `ul`/`ol`/`li`/`header`/`footer`/
+`nav`/`main`/`section`/`article`/`aside`/`form`→`StackLayout` (semantic
+sugar only, no visual distinction). `button`/`label`/`span` already resolve
+to NativeScript's real `Button`/`Label`/`Span` with zero extra work — tag
+matching is case/hyphen-insensitive.
+
+This is tag-name sugar over real native primitives, **not an HTML/CSS
+engine** — there's no block/inline text flow, no floats/position, no form
+submission, no table layout, and `<br>`/`<table>`/`<select>` aren't mapped
+to anything (there's no sane native equivalent). If you need to render
+actual arbitrary HTML/CSS (a CMS article, a third-party checkout page),
+that's what NativeScript's own `<WebView>` is for — mixed in only where you
+actually need it, not as the whole app's rendering model. See
+[ARCHITECTURE.md](./ARCHITECTURE.md) for why "compile arbitrary HTML/CSS to
+native with no WebView" isn't attempted here — it's the scope of a browser
+engine, not a framework feature.
+
+`v-model` on `<input>` needed one extra fix worth knowing about: Vue's
+compiler treats real HTML form tags specially and compiles `v-model` there
+to import a `vModelText` helper from `'vue'` — which plain
+`nativescript-vue` doesn't have (it re-exports `@vue/runtime-core`, no
+DOM). `nuxt-native` ships its own `vModelText` for NativeScript's
+`TextField`, aliased in automatically. Nothing to configure.
 
 ## State management (Pinia)
 

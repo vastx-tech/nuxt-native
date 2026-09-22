@@ -163,8 +163,11 @@ function renderAppEntry({ usePinia } = {}) {
   const piniaUse = usePinia ? '  .use(createPinia())\n' : ''
 
   return `import { createApp } from 'nativescript-vue'
+import { registerHtmlElements } from 'nuxt-native/runtime/html-elements.js'
 ${piniaImport}import RootFrame from './root-frame.vue'
 ${imports}
+
+registerHtmlElements()
 
 createApp(RootFrame)
 ${piniaUse}${registrations}

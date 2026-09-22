@@ -57,6 +57,29 @@ module.exports = (env) => {
     )
   })
 
+  // A *separate*, high-order chainWebpack call, not folded into the one
+  // above: @nativescript/webpack's resolveConfig() calls
+  // applyExternalConfigs() internally, which scans every dependency for
+  // its own top-level nativescript.webpack.js and auto-registers it —
+  // meaning nativescript-vue's require() above AND this auto-discovery
+  // both register its alias-setting chain (same default order 0), and the
+  // auto-discovered one runs *inside* resolveConfig()'s own call stack,
+  // i.e. strictly after anything this factory function registers directly.
+  // So a same-order override here would still lose to that duplicate,
+  // regardless of registration sequence — confirmed by instrumenting the
+  // chain functions directly, not assumed. An explicit higher \`order\`
+  // is the only thing that reliably wins, since webpackChains sorts by
+  // order first and only falls back to registration sequence for ties.
+  // See vue-compat.ts for why this override exists: compiler-dom compiles
+  // v-model on <input> to import vModelText from 'vue', which plain
+  // nativescript-vue doesn't have.
+  webpack.chainWebpack((config) => {
+    config.resolve.alias.set(
+      'vue',
+      require.resolve('nuxt-native/runtime/vue-compat.js')
+    )
+  }, { order: 10 })
+
   return webpack.resolveConfig()
 }
 `)
