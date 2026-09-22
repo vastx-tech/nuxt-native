@@ -33,7 +33,17 @@ export function packageJson(appName) {
         // Required by `ns build`/`ns run` directly (it looks for this exact
         // package name as a project dependency) — pinned to the same range
         // nativescript-vue itself builds and tests against.
-        '@nativescript/webpack': '~5.0.38'
+        '@nativescript/webpack': '~5.0.38',
+        // ts-loader (a dependency of @nativescript/webpack) peer-depends on
+        // this — @nativescript/webpack only lists it in ITS OWN
+        // devDependencies (used to build itself), which are never installed
+        // transitively for consumers. Without it, ts-loader's own compiler
+        // resolution (`require('typescript')`) throws, gets swallowed into
+        // an unused error message, and it presses on with `compiler`
+        // undefined — crashing on `compiler.sys.fileExists` the moment it
+        // tries to locate a tsconfig. Confirmed by reading ts-loader's
+        // compilerSetup.js directly; reproduced by a real user's build log.
+        typescript: '~5.8.0'
       }
     },
     null,
@@ -55,14 +65,73 @@ export function nuxtConfig(appId, appName) {
 }
 
 export function tsconfig() {
+  // A real, standalone config — not Nuxt's usual references-only shell
+  // pointing at .nuxt/tsconfig.*.json. That style only works once `nuxi
+  // prepare`/`nuxi dev` has generated `.nuxt/`, which never happens in this
+  // framework's actual workflow (see ARCHITECTURE.md on why the native
+  // build bypasses Nuxt's own builder entirely). More importantly,
+  // @nativescript/webpack's ts-loader rule reads this exact file directly
+  // via getProjectTSConfigPath() to compile <script lang="ts"> blocks in
+  // .vue pages — a references-only config with no real `compilerOptions`
+  // would leave it with nothing usable even once `typescript` itself is
+  // installed (see the typescript devDependency comment in packageJson()
+  // for the other half of this bug). Trade-off: editor auto-import
+  // IntelliSense for composables/components still needs `npx nuxi prepare`
+  // run at least once — this file prioritizes a working native build.
   return `${JSON.stringify(
     {
-      files: [],
-      references: [
-        { path: './.nuxt/tsconfig.app.json' },
-        { path: './.nuxt/tsconfig.server.json' },
-        { path: './.nuxt/tsconfig.shared.json' },
-        { path: './.nuxt/tsconfig.node.json' }
+      compilerOptions: {
+        target: 'ES2020',
+        module: 'ESNext',
+        moduleResolution: 'Bundler',
+        strict: true,
+        skipLibCheck: true,
+        esModuleInterop: true,
+        resolveJsonModule: true,
+        // Required for TS18003 "No inputs were found": TypeScript's own
+        // `include` glob-matching filters by a hardcoded extension list
+        // (.ts/.d.ts, plus .js only with this flag) no matter what the
+        // glob pattern spells — listing "*.vue" in `include` does not
+        // register .vue as a recognized extension. None of our generated
+        // files are bare .ts, so without allowJs literally nothing in
+        // `include` ever counts as a root file. With it, .nuxt-native/
+        // app.js (plain JS) does, which is enough to satisfy "at least
+        // one input" — reproduced/fixed via a real webpack compile, not
+        // just config resolution.
+        allowJs: true,
+        isolatedModules: true,
+        // nativescript-vue re-exports the full Vue Composition API
+        // alongside its native createApp — mapping the bare "vue"
+        // specifier here is what makes `import { ref } from 'vue'`
+        // type-check correctly against it (nativescript-vue's own
+        // documented recommendation for consumers).
+        paths: {
+          vue: ['./node_modules/nativescript-vue']
+        }
+      },
+      // nuxt.config.ts deliberately excluded: it's never bundled into the
+      // native entry, only read by Nuxt's own tooling — but including it
+      // here puts it in scope for @nativescript/webpack's
+      // ForkTsCheckerWebpackPlugin (which activates now that `typescript`
+      // is an actual dependency), and it fails there since `defineNuxtConfig`
+      // is an ambient global Nuxt's own generated types provide, which we
+      // don't have without running `nuxi prepare`. Reproduced directly via
+      // a real `webpack()` compilation, not just config resolution.
+      //
+      // Explicit per-extension globs, not a bare "app/**/*": TypeScript's
+      // own `include` glob-matching only recognizes .ts/.d.ts (and .js
+      // only with allowJs) when enumerating root files for the config —
+      // it has no special awareness of .vue (that comes from vue-tsc,
+      // which plain ts-loader here doesn't use). A pattern matching zero
+      // recognized-extension files makes `ts.parseJsonConfigFileContent`
+      // fail with TS18003 "No inputs were found", which `ts-loader`
+      // treats as fatal — reproduced directly via a real webpack compile.
+      include: [
+        'app/**/*.ts',
+        'app/**/*.vue',
+        '.nuxt-native/**/*.js',
+        '.nuxt-native/**/*.mjs',
+        '.nuxt-native/**/*.vue'
       ]
     },
     null,
