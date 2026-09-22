@@ -56,14 +56,19 @@ dependency between a Nuxt-hooked build step and a standalone CLI process.
 | CLI `create` | Implemented, verified | Scaffolds a new project (package.json, nuxt.config.ts, starter pages), runs `npm install`, then calls `init`. Verified twice end-to-end: once invoking the local bin directly, once as a cold `npx github:vastx-tech/nuxt-native create ...` from an empty directory with a cleared npx cache — both correctly resolved `nuxt-native` from its GitHub dependency spec, generated a correct route manifest, and reached the real `ns platform add`, which then correctly reported this machine's missing Android SDK (that part is unavoidable — no SDK, no local build, by design). |
 | CLI `init` | Implemented, delegates the hard part | Writes `nativescript.config.ts` if missing, then shells to `ns platform add <platform>` — NativeScript's own template scaffolds `App_Resources` (AndroidManifest.xml, Info.plist, icons), which is *not* hand-generated here on purpose; that's fragile, version-sensitive boilerplate NativeScript already maintains correctly. |
 | CLI `dev` / `build` | Implemented, delegates the hard part | Regenerates `.nuxt-native/` then shells to `ns run <platform>` / `ns build <platform>`. NativeScript's own webpack + LiveSync handle the actual native compile/deploy/hot-reload — not reimplemented here. |
+| The actual compiler/bundler (`webpack.config.cjs`, `.vue` → native bundle) | Implemented, partially verified | This was missing entirely until reported — `init`/`create` generated `nativescript.config.ts` and the route manifest, but no `webpack.config.js`, no `@nativescript/webpack` devDependency, and nothing wiring `vue-loader` to nativescript-vue's renderer, so `.vue` pages had no loader at all. Fixed by generating `webpack.config.cjs` that calls the official `nativescript-vue/nativescript.webpack.js` helper (it registers vue-loader against `@nativescript/webpack`'s base "vue" rule and aliases the bare `vue` specifier to `nativescript-vue`, which is what lets `import { ref } from 'vue'` resolve correctly on-device). It's `.cjs`, not `.js`, because `@nativescript/webpack` loads it with a plain `require(configPath)` (confirmed by reading its bin source) and nuxt-native projects have `"type": "module"` in package.json — under that, `require()` of a `.js` file throws `ERR_REQUIRE_ESM`; reproduced directly, then confirmed clean after renaming to `.cjs` and pointing `nativescript.config.ts`'s `bundlerConfigPath` at it. What's still unverified: invoking the resolved config with a hand-built `env` object gets one step further (`webpack.init(env)` then fails on a value only the real `ns` CLI supplies — the native platform directory, which only exists after `ns platform add` succeeds, which needs a real Android SDK/Xcode this environment doesn't have). |
 | Auto-imports reaching the on-device bundle | **Not yet wired** | `addImportsDir`/`addComponentsDir` in the Nuxt module cover editor DX and `vue-tsc`, but the CLI's handoff to `ns run`/`ns build` does not yet inject the equivalent `unplugin-auto-import`/`unplugin-vue-components` webpack plugins into NativeScript's build. Until this lands, native pages need explicit `import { useDevice } from 'nuxt-native'`-style imports rather than relying on auto-import. |
 | End-to-end device/emulator testing | **Not done** | Nothing in this repo has been run against a real iOS/Android build yet — there's no mobile toolchain in the environment this was authored in. Treat the `ns`/NativeScript integration points as a well-reasoned first draft, not a verified one. |
 
 ## Roadmap
 
-1. Verify the `nativescript.config.ts` + `App_Resources` handoff against a
-   real `ns platform add` run; fix whatever assumptions above turn out
-   wrong.
+1. Get a real Android SDK or Xcode install in front of this so `ns platform
+   add` can finish (it's the one thing that genuinely can't be automated
+   here) — then `ns build android` is the real end-to-end test of
+   `webpack.config.cjs` and everything upstream of it. High odds it surfaces
+   another gap the same way the missing webpack config and its `.cjs`
+   requirement did; treat that as expected, not a sign anything above is
+   unreliable.
 2. Wire `unplugin-auto-import`/`unplugin-vue-components` into the
    NativeScript webpack build the CLI hands off to, so auto-imports work
    identically in editor DX and on-device.

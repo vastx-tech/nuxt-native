@@ -20,6 +20,12 @@ export function packageJson(appName) {
         'nativescript-vue': '^3.1.2',
         '@nativescript/core': '^9.1.2',
         nuxt: '^4.0.0'
+      },
+      devDependencies: {
+        // Required by `ns build`/`ns run` directly (it looks for this exact
+        // package name as a project dependency) — pinned to the same range
+        // nativescript-vue itself builds and tests against.
+        '@nativescript/webpack': '~5.0.38'
       }
     },
     null,

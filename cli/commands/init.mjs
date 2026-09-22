@@ -1,5 +1,6 @@
 import { loadNativeConfig } from '../lib/load-config.mjs'
 import { ensureNativeScriptConfig } from '../lib/nativescript-config.mjs'
+import { ensureWebpackConfig } from '../lib/webpack-config.mjs'
 import { generateEntry } from '../lib/generate-entry.mjs'
 import { run } from '../lib/run.mjs'
 
@@ -9,6 +10,9 @@ export async function init({ platforms } = {}) {
 
   const configPath = ensureNativeScriptConfig(process.cwd(), config)
   console.log(`[nuxt-native] nativescript.config.ts ready at ${configPath}`)
+
+  const webpackConfigPath = ensureWebpackConfig(process.cwd())
+  console.log(`[nuxt-native] webpack config ready at ${webpackConfigPath}`)
 
   generateEntry({ pagesDir: 'app/pages' })
   console.log('[nuxt-native] Generated .nuxt-native/ bootstrap from app/pages')
