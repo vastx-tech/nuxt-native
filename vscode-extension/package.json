@@ -1,0 +1,94 @@
+{
+  "name": "nuxt-native-vscode",
+  "displayName": "Nuxt Native",
+  "description": "Run, hot-reload, and manage Nuxt Native projects from VS Code — device picker, hot restart, and every nuxt-native CLI command from the Command Palette.",
+  "version": "0.1.0",
+  "publisher": "vastx-tech",
+  "license": "MIT",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vastx-tech/nuxt-native"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "workspaceContains:nativescript.config.ts"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "nuxtNative.create",
+        "title": "Nuxt Native: Create Project..."
+      },
+      {
+        "command": "nuxtNative.init",
+        "title": "Nuxt Native: Init (add to existing project)"
+      },
+      {
+        "command": "nuxtNative.run",
+        "title": "Nuxt Native: Run..."
+      },
+      {
+        "command": "nuxtNative.hotRestart",
+        "title": "Nuxt Native: Hot Restart"
+      },
+      {
+        "command": "nuxtNative.forceRestart",
+        "title": "Nuxt Native: Force Restart (rebuild native)"
+      },
+      {
+        "command": "nuxtNative.toggleWatcher",
+        "title": "Nuxt Native: Toggle File Watcher"
+      },
+      {
+        "command": "nuxtNative.stop",
+        "title": "Nuxt Native: Stop"
+      },
+      {
+        "command": "nuxtNative.build",
+        "title": "Nuxt Native: Build..."
+      },
+      {
+        "command": "nuxtNative.doctor",
+        "title": "Nuxt Native: Doctor"
+      },
+      {
+        "command": "nuxtNative.analyze",
+        "title": "Nuxt Native: Analyze Bundle Size..."
+      },
+      {
+        "command": "nuxtNative.lint",
+        "title": "Nuxt Native: Lint Routes"
+      },
+      {
+        "command": "nuxtNative.clean",
+        "title": "Nuxt Native: Clean"
+      },
+      {
+        "command": "nuxtNative.keystoreCreate",
+        "title": "Nuxt Native: Create Signing Keystore..."
+      },
+      {
+        "command": "nuxtNative.selectDevice",
+        "title": "Nuxt Native: Select Device..."
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.9.2",
+    "typescript": "^5.6.0"
+  }
+}

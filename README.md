@@ -185,12 +185,24 @@ npx nuxt-native keystore create --alias my-app
 npx nuxt-native build android --release
 ```
 
+## VS Code extension
+
+`vscode-extension/` (not yet published to the Marketplace — see its own
+README) puts every command above in the Command Palette, plus a device
+picker and hot-restart/force-restart/stop controls on the status bar. It
+runs everything inside a real integrated terminal rather than a background
+process, specifically because `ns run`'s interactive controls only work
+over a real TTY (confirmed by reading NativeScript's own source, not
+assumed) — click into that terminal at any point and the same keys work
+by hand too.
+
 ## Repository layout
 
 ```
-src/            the Nuxt module (composables, components, route generation)
-cli/, bin/      the nuxt-native CLI (native bootstrap + ns run/build orchestration)
-playground/     example Nuxt app consuming the module
+src/                the Nuxt module (composables, components, route generation)
+cli/, bin/          the nuxt-native CLI (native bootstrap + ns run/build orchestration)
+playground/         example Nuxt app consuming the module
+vscode-extension/   the VS Code extension (separate package.json/build)
 ```
 
 ## Contributing
