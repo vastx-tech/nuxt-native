@@ -5,6 +5,15 @@ import { scanPages } from './scan-pages.mjs'
 const OUT_DIR = '.nuxt-native'
 
 /**
+ * Path (relative to project root) to the generated bootstrap entry —
+ * shared with nativescript-config.mjs and scaffold-templates.mjs, which
+ * both need to point at it (nativescript.config.ts's `main` field and
+ * package.json's `main` fallback) so @nativescript/webpack's
+ * getEntryPath() can find it instead of throwing on an undefined path.
+ */
+export const ENTRY_FILE = `${OUT_DIR}/app.js`
+
+/**
  * Regenerates the standalone native bootstrap: a route manifest (mirroring
  * what the Nuxt module generates for editor/type-checking DX, see
  * src/build/generate-routes.ts) plus the actual entry file NativeScript's

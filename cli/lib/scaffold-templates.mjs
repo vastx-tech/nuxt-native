@@ -1,3 +1,5 @@
+import { ENTRY_FILE } from './generate-entry.mjs'
+
 // Until nuxt-native is published to npm, generated projects depend on it
 // straight from GitHub. Once it's published, this is the one line to change.
 export const NUXT_NATIVE_DEPENDENCY_SPEC = 'github:vastx-tech/nuxt-native'
@@ -8,6 +10,12 @@ export function packageJson(appName) {
       name: appName,
       private: true,
       type: 'module',
+      // Fallback only: nativescript.config.ts's own `main` field (set by
+      // ensureNativeScriptConfig) is checked first by
+      // @nativescript/webpack's getEntryPath() — this covers the case
+      // where that field is somehow not read (see its own comment for why
+      // that's not just theoretical).
+      main: ENTRY_FILE,
       scripts: {
         'native:init': 'nuxt-native init',
         'native:dev:ios': 'nuxt-native dev ios',
