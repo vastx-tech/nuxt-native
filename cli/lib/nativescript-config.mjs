@@ -11,9 +11,16 @@ import { WEBPACK_CONFIG_FILENAME } from './webpack-config.mjs'
  * own template the first time it runs against this config, which is far
  * more reliable than us hand-authoring AndroidManifest.xml/Info.plist.
  *
- * `bundlerConfigPath` points `ns` at webpack.config.cjs instead of its
- * default `webpack.config.js` — see webpack-config.mjs for why the `.cjs`
- * extension is required in a `"type": "module"` project.
+ * Points `ns` at webpack.config.cjs instead of its default
+ * `webpack.config.js` — see webpack-config.mjs for why the `.cjs` extension
+ * is required in a `"type": "module"` project. Set via BOTH
+ * `bundlerConfigPath` (the current field) and `webpackConfigPath` (the
+ * older field `bundlerConfigPath` itself falls back to when unset) —
+ * observed a real project where `ns` used the hardcoded default
+ * `webpack.config.js` despite `bundlerConfigPath` being present and
+ * correctly parsed in isolation, root cause not yet pinned down. Setting
+ * both is a safe, independent-path belt-and-suspenders fix regardless of
+ * which one that CLI actually reads.
  */
 export function ensureNativeScriptConfig(projectRoot, { appId }) {
   const configPath = join(projectRoot, 'nativescript.config.ts')
@@ -26,6 +33,7 @@ export default {
   appPath: '.nuxt-native',
   appResourcesPath: 'App_Resources',
   bundlerConfigPath: ${JSON.stringify(WEBPACK_CONFIG_FILENAME)},
+  webpackConfigPath: ${JSON.stringify(WEBPACK_CONFIG_FILENAME)},
   android: {
     v8Flags: '--expose_gc',
     markingMode: 'none'
