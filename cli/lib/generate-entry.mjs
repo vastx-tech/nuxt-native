@@ -81,7 +81,20 @@ import Initial from ${JSON.stringify(initial.file)}
 const RUNTIME_COMPONENTS = [
   { tag: 'NPage', specifier: 'nuxt-native/runtime/components/NPage.vue' },
   { tag: 'NActionBar', specifier: 'nuxt-native/runtime/components/NActionBar.vue' },
-  { tag: 'NTabs', specifier: 'nuxt-native/runtime/components/NTabs.vue' }
+  { tag: 'NTabs', specifier: 'nuxt-native/runtime/components/NTabs.vue' },
+  { tag: 'NButton', specifier: 'nuxt-native/runtime/components/NButton.vue' },
+  { tag: 'NText', specifier: 'nuxt-native/runtime/components/NText.vue' },
+  { tag: 'NInput', specifier: 'nuxt-native/runtime/components/NInput.vue' },
+  { tag: 'NCard', specifier: 'nuxt-native/runtime/components/NCard.vue' },
+  { tag: 'NSwitch', specifier: 'nuxt-native/runtime/components/NSwitch.vue' },
+  { tag: 'NSpinner', specifier: 'nuxt-native/runtime/components/NSpinner.vue' },
+  { tag: 'NAvatar', specifier: 'nuxt-native/runtime/components/NAvatar.vue' },
+  { tag: 'NBadge', specifier: 'nuxt-native/runtime/components/NBadge.vue' },
+  { tag: 'NDivider', specifier: 'nuxt-native/runtime/components/NDivider.vue' }
+  // NBottomSheet deliberately excluded: it's shown imperatively via
+  // useBottomSheet()'s $showModal call (which references it by direct JS
+  // import, not by template tag name), never used as a template tag
+  // itself, so it needs no global registration here.
 ]
 
 function renderAppEntry() {

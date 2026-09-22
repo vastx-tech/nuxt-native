@@ -42,6 +42,11 @@ tradeoff React Native and Flutter made, applied to the Nuxt/Vue ecosystem.
 - **Components** (`<NPage>`, `<NActionBar>`, `<NTabs>`) are thin,
   safe-area-aware wrappers around NativeScript-Vue's native primitives
   (`<Frame>`, `<ActionBar>`, `<TabStrip>`, ...).
+- **A UI kit** (`<NButton>`, `<NText>`, `<NInput>`, `<NCard>`, `<NSwitch>`,
+  `<NSpinner>`, `<NAvatar>`, `<NBadge>`, `<NDivider>`, `useBottomSheet()`,
+  `useModal()`) — themeable, sensibly-defaulted components on top of the
+  primitives above, so building a real screen doesn't start from
+  `<StackLayout>` and inline styles every time.
 - **The `nuxt-native` CLI** generates the on-device bootstrap from
   `app/pages` and hands off to NativeScript's own toolchain (`ns run`,
   `ns build`) for the actual native compile/deploy/LiveSync — that's
@@ -101,6 +106,53 @@ Write pages under `app/pages/` using NativeScript-Vue's native elements —
 `<Frame>`, `<StackLayout>`, `<Label>`, `<Button>`, `<TabStrip>` — instead of
 HTML. `<NPage>`, `<NActionBar>`, and `<NTabs>` wrap the common ones with
 sensible defaults. See [`playground/`](./playground) for a working example.
+
+## UI kit
+
+```vue
+<template>
+  <NPage title="Sign in">
+    <StackLayout style="padding: 20">
+      <NText text="Welcome back" variant="h1" />
+      <NInput v-model="email" label="Email" placeholder="you@example.com" />
+      <NInput v-model="password" label="Password" secure :error="error" />
+      <NButton text="Sign in" variant="primary" :loading="loading" @tap="signIn" />
+      <NButton text="Forgot password?" variant="ghost" @tap="openHelp" />
+    </StackLayout>
+  </NPage>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useBottomSheet } from 'nuxt-native/runtime/composables/useBottomSheet.js'
+import HelpSheet from '../components/help-sheet.vue'
+
+const email = ref('')
+const password = ref('')
+const error = ref('')
+const loading = ref(false)
+
+const { open } = useBottomSheet()
+
+async function signIn() {
+  loading.value = true
+  // ...
+  loading.value = false
+}
+
+function openHelp() {
+  open(HelpSheet)
+}
+</script>
+```
+
+Every component ships with sensible defaults pulled from a shared
+`theme.ts` (colors, spacing, radii, type scale) — pass a `variant`/`size`
+prop to restyle, or override individual style props directly, same as any
+NativeScript-Vue element. `useBottomSheet()`/`useModal()` show any
+component of your own as a bottom sheet or modal via nativescript-vue's
+real `$showModal` — your content component can dismiss itself by importing
+`$closeModal` from `'nativescript-vue'` directly.
 
 ## Repository layout
 
