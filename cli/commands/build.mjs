@@ -18,6 +18,39 @@ export async function build(platform, nsArgs = []) {
 
   generateEntry({ pagesDir: 'app/pages' })
 
-  console.log(`[nuxt-native] ns build ${platform} ${nsArgs.join(' ')}`.trimEnd())
-  await run('npx', ['--yes', 'nativescript', 'build', platform, ...nsArgs])
+  const finalArgs = [...nsArgs]
+  if (finalArgs.includes('--release') && !finalArgs.some(arg => arg.startsWith('--key-store'))) {
+    const envArgs = keystoreArgsFromEnv()
+    if (envArgs) {
+      console.log('[nuxt-native] --release with no --key-store-* flags — using NUXT_NATIVE_KEYSTORE_* environment variables')
+      finalArgs.push(...envArgs)
+    }
+  }
+
+  console.log(`[nuxt-native] ns build ${platform} ${finalArgs.join(' ')}`.trimEnd())
+  await run('npx', ['--yes', 'nativescript', 'build', platform, ...finalArgs])
+}
+
+/**
+ * See keystore.mjs: `nuxt-native keystore create` never persists a
+ * password to disk, only prints these variable names — reading them here
+ * is what makes `nuxt-native build android --release` (no flags) work
+ * once they're set, without ever writing a secret to a project file.
+ */
+function keystoreArgsFromEnv() {
+  const {
+    NUXT_NATIVE_KEYSTORE_PATH,
+    NUXT_NATIVE_KEYSTORE_PASSWORD,
+    NUXT_NATIVE_KEYSTORE_ALIAS,
+    NUXT_NATIVE_KEYSTORE_ALIAS_PASSWORD
+  } = process.env
+
+  if (!NUXT_NATIVE_KEYSTORE_PATH) return null
+
+  return [
+    '--key-store-path', NUXT_NATIVE_KEYSTORE_PATH,
+    '--key-store-password', NUXT_NATIVE_KEYSTORE_PASSWORD,
+    '--key-store-alias', NUXT_NATIVE_KEYSTORE_ALIAS,
+    '--key-store-alias-password', NUXT_NATIVE_KEYSTORE_ALIAS_PASSWORD
+  ]
 }

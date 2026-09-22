@@ -10,13 +10,14 @@ than reinventing one from scratch.
 
 > **Status: early / pre-alpha, but confirmed running on a real device.** The
 > `create` command has taken a project from an empty folder to a rendering
-> Android app on physical hardware — the module, composables, CLI, and the
-> native build pipeline it hands off to all work together end to end. Auto-
-> imports don't yet reach the on-device bundle (native pages need explicit
-> imports for now), and iOS/most composables beyond `useDevice` are still
-> unverified on-device. See [ARCHITECTURE.md](./ARCHITECTURE.md) for exactly
-> what's confirmed vs. still the frontier — that's where contributors are
-> most needed.
+> Android app on physical hardware — the module, composables, UI kit, CLI
+> (including release signing, a doctor command, and a bundle analyzer),
+> and the native build pipeline it hands off to all work together end to
+> end. Auto-imports don't yet reach the on-device bundle (native pages
+> need explicit imports for now), and iOS is entirely unverified — every
+> real-device confirmation so far is Android. See
+> [ARCHITECTURE.md](./ARCHITECTURE.md) for exactly what's confirmed vs.
+> still the frontier — that's where contributors are most needed.
 
 ## Why not Capacitor / a WebView?
 
@@ -50,7 +51,12 @@ tradeoff React Native and Flutter made, applied to the Nuxt/Vue ecosystem.
 - **The `nuxt-native` CLI** generates the on-device bootstrap from
   `app/pages` and hands off to NativeScript's own toolchain (`ns run`,
   `ns build`) for the actual native compile/deploy/LiveSync — that's
-  battle-tested infrastructure we orchestrate rather than replace.
+  battle-tested infrastructure we orchestrate rather than replace. It also
+  ships `doctor` (checks a project against every misconfiguration this
+  framework has actually hit), `keystore create` (generates an Android
+  signing keystore, never touches your passwords), `analyze` (a bundle
+  size report), `lint` (catches a `navigate()` call to a route that
+  doesn't exist), and `clean`.
 
 ## Quickstart
 
@@ -153,6 +159,31 @@ NativeScript-Vue element. `useBottomSheet()`/`useModal()` show any
 component of your own as a bottom sheet or modal via nativescript-vue's
 real `$showModal` — your content component can dismiss itself by importing
 `$closeModal` from `'nativescript-vue'` directly.
+
+## CLI reference
+
+```bash
+nuxt-native create <name> [--app-id com.example.app] [--platforms ios,android]
+nuxt-native init [ios] [android]     # add to an existing project
+nuxt-native dev <ios|android> [ns run flags...]
+nuxt-native build <ios|android> [ns build flags...]
+nuxt-native doctor                   # check the project, then run `ns info`
+nuxt-native keystore create --alias <name> [--output ./release.keystore]
+nuxt-native analyze <ios|android>    # bundle size report → report/report.html
+nuxt-native lint                     # catch a navigate() call to a route that doesn't exist
+nuxt-native clean                    # remove platforms/, hooks/, and cached build artifacts
+```
+
+`dev`/`build` forward any flags after `<ios|android>` straight to the real
+`ns run`/`ns build` — nothing NativeScript supports is off-limits. For a
+signed Android release, generate a keystore once and set the environment
+variables it prints (never written to disk):
+
+```bash
+npx nuxt-native keystore create --alias my-app
+# then, once NUXT_NATIVE_KEYSTORE_* is set in your shell/CI secrets:
+npx nuxt-native build android --release
+```
 
 ## Repository layout
 
