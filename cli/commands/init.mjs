@@ -1,7 +1,9 @@
+import { join } from 'node:path'
 import { loadNativeConfig } from '../lib/load-config.mjs'
 import { ensureNativeScriptConfig } from '../lib/nativescript-config.mjs'
 import { ensureWebpackConfig } from '../lib/webpack-config.mjs'
 import { generateEntry } from '../lib/generate-entry.mjs'
+import { applySplashBranding } from '../lib/splash.mjs'
 import { run } from '../lib/run.mjs'
 
 export async function init({ platforms } = {}) {
@@ -21,6 +23,13 @@ export async function init({ platforms } = {}) {
     console.log(`[nuxt-native] ns platform add ${platform} (scaffolds App_Resources on first run)`)
     await run('npx', ['--yes', 'nativescript', 'platform', 'add', platform])
   }
+
+  // Runs after `ns platform add` unconditionally, not just on first init:
+  // it's cheap, idempotent (always regenerates the same images), and
+  // covers the case where App_Resources already existed (so the platform
+  // loop above was a no-op) but was never branded yet.
+  applySplashBranding(join(process.cwd(), 'App_Resources'), targets)
+  console.log('[nuxt-native] Applied Nuxt Native splash screen branding')
 
   console.log('[nuxt-native] Init complete. Next: nuxt-native dev <ios|android>')
 }

@@ -67,10 +67,12 @@ npx nuxt-native dev android   # or: ios
 `create` scaffolds `nuxt.config.ts`, a starter `app/pages/index.vue` +
 `app/pages/details/[id].vue` demonstrating navigation, runs `npm install`,
 writes `nativescript.config.ts`, and runs `ns platform add` for each
-platform (`--platforms ios,android`, defaults to both). Verified end-to-end
-from a clean directory via `npx`; the only step it can't do for you is
-provide an actual Android SDK / Xcode install — `ns platform add` will
-tell you clearly if either is missing.
+platform (`--platforms ios,android`, defaults to both) — including
+replacing the splash screen NativeScript's own template generates with
+Nuxt Native's own branding, so a fresh install doesn't launch showing
+someone else's logo. Verified end-to-end from a clean directory via `npx`;
+the only step it can't do for you is provide an actual Android SDK / Xcode
+install — `ns platform add` will tell you clearly if either is missing.
 
 Adding it to an **existing** Nuxt project instead:
 
