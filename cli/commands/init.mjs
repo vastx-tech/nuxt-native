@@ -4,6 +4,7 @@ import { ensureNativeScriptConfig } from '../lib/nativescript-config.mjs'
 import { ensureWebpackConfig } from '../lib/webpack-config.mjs'
 import { generateEntry } from '../lib/generate-entry.mjs'
 import { applySplashBranding } from '../lib/splash.mjs'
+import { ensureTailwindSetup } from '../lib/tailwind-setup.mjs'
 import { run } from '../lib/run.mjs'
 
 export async function init({ platforms } = {}) {
@@ -15,6 +16,9 @@ export async function init({ platforms } = {}) {
 
   const webpackConfigPath = ensureWebpackConfig(process.cwd())
   console.log(`[nuxt-native] webpack config ready at ${webpackConfigPath}`)
+
+  ensureTailwindSetup(process.cwd())
+  console.log('[nuxt-native] Tailwind config ready (tailwind.config.cjs/postcss.config.cjs/app/app.css)')
 
   generateEntry({ pagesDir: 'app/pages' })
   console.log('[nuxt-native] Generated .nuxt-native/ bootstrap from app/pages')

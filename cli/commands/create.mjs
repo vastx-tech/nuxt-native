@@ -1,15 +1,12 @@
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
-  appCss,
   appVue,
   detailsPage,
   gitignore,
   indexPage,
   nuxtConfig,
   packageJson,
-  postcssConfig,
-  tailwindConfig,
   tsconfig
 } from '../lib/scaffold-templates.mjs'
 import { run } from '../lib/run.mjs'
@@ -67,10 +64,11 @@ function scaffold(targetDir, { appId, appName }) {
   writeFileSync(resolve(targetDir, 'nuxt.config.ts'), nuxtConfig(appId, appName))
   writeFileSync(resolve(targetDir, 'tsconfig.json'), tsconfig())
   writeFileSync(resolve(targetDir, '.gitignore'), gitignore())
-  writeFileSync(resolve(targetDir, 'tailwind.config.cjs'), tailwindConfig())
-  writeFileSync(resolve(targetDir, 'postcss.config.cjs'), postcssConfig())
   writeFileSync(resolve(targetDir, 'app/app.vue'), appVue())
-  writeFileSync(resolve(targetDir, 'app/app.css'), appCss())
+  // tailwind.config.cjs/postcss.config.cjs/app/app.css are written by
+  // ensureTailwindSetup() inside init(), which create() calls below —
+  // one place for both create's fresh-scaffold path and init's
+  // retrofit-an-existing-project path, instead of duplicating this here.
   writeFileSync(resolve(targetDir, 'app/pages/index.vue'), indexPage())
   writeFileSync(resolve(targetDir, 'app/pages/details/[id].vue'), detailsPage())
 }
