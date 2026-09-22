@@ -17,7 +17,7 @@ export async function init({ platforms } = {}) {
   const webpackConfigPath = ensureWebpackConfig(process.cwd())
   console.log(`[nuxt-native] webpack config ready at ${webpackConfigPath}`)
 
-  ensureTailwindSetup(process.cwd())
+  await ensureTailwindSetup(process.cwd())
   console.log('[nuxt-native] Tailwind config ready (tailwind.config.cjs/postcss.config.cjs/app/app.css)')
 
   generateEntry({ pagesDir: 'app/pages' })
