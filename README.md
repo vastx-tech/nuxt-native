@@ -53,6 +53,9 @@ tradeoff React Native and Flutter made, applied to the Nuxt/Vue ecosystem.
   `class="flex-col items-center gap-4 bg-indigo-600 rounded-lg p-3"` on an
   `<NFlex>` or any UI kit component works the same way it would on web. See
   [UI kit](#ui-kit) below for what's in scope and why.
+- **Pinia, as a first-class citizen** — install `pinia` and `nuxt-native
+  init`/`create` wires `createPinia()` into the app bootstrap automatically.
+  See [State management (Pinia)](#state-management-pinia) below.
 - **The `nuxt-native` CLI** generates the on-device bootstrap from
   `app/pages` and hands off to NativeScript's own toolchain (`ns run`,
   `ns build`) for the actual native compile/deploy/LiveSync — that's
@@ -208,6 +211,61 @@ the same CSS parser `@nativescript/webpack` uses) — see
 [ARCHITECTURE.md](./ARCHITECTURE.md) for the full trail, including why this
 ships Android-first with iOS's `<FlexboxLayout>` performance deliberately
 left to a real on-device benchmark before it's the default there too.
+
+## State management (Pinia)
+
+```bash
+npm install pinia @vue/devtools-api
+npx nuxt-native init android   # re-wires the bootstrap now that pinia is present
+```
+
+```ts
+// app/stores/counter.ts
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
+
+export const useCounterStore = defineStore('counter', () => {
+  const count = ref(0)
+  function increment() { count.value++ }
+  return { count, increment }
+})
+```
+
+```vue
+<template>
+  <NPage title="Home">
+    <NFlex class="flex-col p-5 gap-4">
+      <NText :text="`Count: ${counter.count}`" />
+      <NButton text="Increment" @tap="counter.increment" />
+    </NFlex>
+  </NPage>
+</template>
+
+<script setup lang="ts">
+import { useCounterStore } from '../stores/counter'
+const counter = useCounterStore()
+</script>
+```
+
+`nuxt-native init`/`create` detects a `pinia` dependency and wires
+`createApp(RootFrame).use(createPinia())` into the generated bootstrap
+automatically — nothing else to configure. Stores are plain Pinia, explicitly
+imported the same way composables are today (see the auto-imports note
+above) — no special nuxt-native API. This works because Pinia's core is
+pure Vue reactivity with no DOM dependency at all (checked directly against
+its actual dist output, not assumed), and every DOM/devtools-only code path
+it has is gated behind a `typeof window !== 'undefined'` check that's
+simply always false in NativeScript's runtime. Verified with a real
+`webpack()` compile: a store used from a page compiles cleanly and its
+code is confirmed present in the emitted bundle — see ARCHITECTURE.md for
+the full verification trail.
+
+Not every Nuxt module works this way — most inject their functionality
+through Nuxt's own Vite/Nitro build hooks, which the native build never
+runs at all (it's a separate NativeScript webpack pipeline end to end), or
+assume a DOM/SSR context that doesn't exist here. Pinia works because its
+actual logic has neither dependency; before adding another module, check
+whether the same is true for it.
 
 ## CLI reference
 

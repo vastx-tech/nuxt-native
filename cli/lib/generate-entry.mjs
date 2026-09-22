@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module'
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { scanPages } from './scan-pages.mjs'
@@ -40,7 +41,7 @@ export function generateEntry({ projectRoot = process.cwd(), pagesDir = 'app/pag
   mkdirSync(outDir, { recursive: true })
   writeFileSync(join(outDir, 'route-manifest.mjs'), renderManifest(routes))
   writeFileSync(join(outDir, 'root-frame.vue'), renderRootFrame(initial))
-  writeFileSync(join(outDir, 'app.js'), renderAppEntry())
+  writeFileSync(join(outDir, 'app.js'), renderAppEntry({ usePinia: isPiniaInstalled(projectRoot) }))
 
   // @nativescript/webpack's app-css-loader resolves "./app.css" relative to
   // the entry file's own directory (confirmed against its source) — i.e.
@@ -112,7 +113,45 @@ const RUNTIME_COMPONENTS = [
   // itself, so it needs no global registration here.
 ]
 
-function renderAppEntry() {
+/**
+ * Optional, first-class Pinia support: wired into the bootstrap only if
+ * the project actually depends on `pinia` (checked below), never forced.
+ *
+ * Why this is safe on a runtime with no DOM at all: Pinia's own dist
+ * (`pinia.js`, the one file its package.json `exports` map resolves to
+ * unconditionally) has zero references to `document`/`localStorage`/
+ * `navigator`, and its one real runtime dependency (`nostics`, a
+ * zero-dependency diagnostic-message formatter) has none either — checked
+ * by downloading both via `npm pack` and grepping their actual dist
+ * output, not assumed from the package description. Its every DOM/
+ * devtools-only code path (`registerPiniaDevtools`, the devtools plugin
+ * itself, a `saveAs` file-download helper) is gated behind a single
+ * `IS_CLIENT = typeof window !== "undefined"` check — and NativeScript's
+ * runtime never defines a global `window` (confirmed by grepping
+ * @nativescript/core for one), so every one of those branches is simply
+ * never taken at runtime, the same way they wouldn't be during SSR.
+ * `@vue/devtools-api` (pinia's one non-optional peer dependency — its
+ * `setupDevtoolsPlugin` import is static, so webpack needs it resolvable
+ * even though `IS_CLIENT` means it's never actually called) was checked
+ * the same way: zero `window` references in its own main entry.
+ * Everything Pinia's core imports from `vue` (`effectScope`,
+ * `getCurrentInstance`, `inject`, `markRaw`, `toRaw`, `toRefs`, ...)
+ * resolves correctly through the existing `vue` → `nativescript-vue` alias,
+ * since `nativescript-vue`'s own entry does `export * from
+ * '@vue/runtime-core'` (confirmed directly), and its pinned
+ * `@vue/runtime-core` version satisfies Pinia's `vue: ^3.5.11` peer
+ * requirement with room to spare.
+ */
+function isPiniaInstalled(projectRoot) {
+  try {
+    createRequire(join(projectRoot, 'package.json')).resolve('pinia')
+    return true
+  } catch {
+    return false
+  }
+}
+
+function renderAppEntry({ usePinia } = {}) {
   const imports = RUNTIME_COMPONENTS
     .map(({ tag, specifier }) => `import ${tag} from ${JSON.stringify(specifier)}`)
     .join('\n')
@@ -120,12 +159,15 @@ function renderAppEntry() {
     .map(({ tag }) => `  .component(${JSON.stringify(tag)}, ${tag})`)
     .join('\n')
 
+  const piniaImport = usePinia ? `import { createPinia } from 'pinia'\n` : ''
+  const piniaUse = usePinia ? '  .use(createPinia())\n' : ''
+
   return `import { createApp } from 'nativescript-vue'
-import RootFrame from './root-frame.vue'
+${piniaImport}import RootFrame from './root-frame.vue'
 ${imports}
 
 createApp(RootFrame)
-${registrations}
+${piniaUse}${registrations}
   .start()
 `
 }
