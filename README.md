@@ -8,12 +8,15 @@ auto-imported composables/components, a single module system — to that model,
 built on [NativeScript](https://nativescript.org)'s native runtime rather
 than reinventing one from scratch.
 
-> **Status: early / pre-alpha.** The Nuxt-side developer experience (module,
-> composables, components, route generation, CLI) is implemented and
-> documented below. The native build pipeline it hands off to has not been
-> run against a real device or emulator yet. See
-> [ARCHITECTURE.md](./ARCHITECTURE.md) for exactly what's solid vs. what's
-> still the frontier — that's where contributors are most needed.
+> **Status: early / pre-alpha, but confirmed running on a real device.** The
+> `create` command has taken a project from an empty folder to a rendering
+> Android app on physical hardware — the module, composables, CLI, and the
+> native build pipeline it hands off to all work together end to end. Auto-
+> imports don't yet reach the on-device bundle (native pages need explicit
+> imports for now), and iOS/most composables beyond `useDevice` are still
+> unverified on-device. See [ARCHITECTURE.md](./ARCHITECTURE.md) for exactly
+> what's confirmed vs. still the frontier — that's where contributors are
+> most needed.
 
 ## Why not Capacitor / a WebView?
 
