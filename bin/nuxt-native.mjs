@@ -22,11 +22,11 @@ try {
       break
 
     case 'dev':
-      await dev(args[0])
+      await dev(args[0], args.slice(1))
       break
 
     case 'build':
-      await build(args[0], { release: args.includes('--release') })
+      await build(args[0], args.slice(1))
       break
 
     default:
@@ -50,7 +50,12 @@ Usage:
   nuxt-native create <name> [--app-id com.example.app] [--platforms ios,android]
                                       Scaffold a new project, install deps, and wire up native platforms
   nuxt-native init [ios] [android]   Scaffold nativescript.config.ts + native platforms (existing project)
-  nuxt-native dev <ios|android>      Build, deploy, and LiveSync to a device/simulator
-  nuxt-native build <ios|android> [--release]   Produce a native build artifact
+  nuxt-native dev <ios|android> [ns run flags...]     Build, deploy, and LiveSync to a device/simulator
+  nuxt-native build <ios|android> [ns build flags...] Produce a native build artifact
+
+Flags after <ios|android> are forwarded as-is to the underlying \`ns run\`/
+\`ns build\` command — e.g. a signed Android release:
+  nuxt-native build android --release --key-store-path ./my.keystore \\
+    --key-store-password *** --key-store-alias *** --key-store-alias-password ***
 `)
 }
