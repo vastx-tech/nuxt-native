@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { scanPages } from './scan-pages.mjs'
 
@@ -42,6 +42,20 @@ export function generateEntry({ projectRoot = process.cwd(), pagesDir = 'app/pag
   writeFileSync(join(outDir, 'root-frame.vue'), renderRootFrame(initial))
   writeFileSync(join(outDir, 'app.js'), renderAppEntry())
 
+  // @nativescript/webpack's app-css-loader resolves "./app.css" relative to
+  // the entry file's own directory (confirmed against its source) — i.e.
+  // .nuxt-native/app.css, not the project's real app/app.css. That real
+  // file is the one thing here users actually author (Tailwind directives,
+  // custom CSS); everything else in .nuxt-native/ is generated. So this
+  // copies it into place on every generate pass, same as the other
+  // generated files, instead of asking users to hand-maintain a duplicate.
+  // Optional: projects that don't use app/app.css (or predate this feature)
+  // just don't get one, and app-css-loader silently no-ops on a missing file.
+  const appCssPath = resolve(projectRoot, 'app/app.css')
+  if (existsSync(appCssPath)) {
+    copyFileSync(appCssPath, join(outDir, 'app.css'))
+  }
+
   return { routes, initial, outDir }
 }
 
@@ -82,6 +96,7 @@ const RUNTIME_COMPONENTS = [
   { tag: 'NPage', specifier: 'nuxt-native/runtime/components/NPage.vue' },
   { tag: 'NActionBar', specifier: 'nuxt-native/runtime/components/NActionBar.vue' },
   { tag: 'NTabs', specifier: 'nuxt-native/runtime/components/NTabs.vue' },
+  { tag: 'NFlex', specifier: 'nuxt-native/runtime/components/NFlex.vue' },
   { tag: 'NButton', specifier: 'nuxt-native/runtime/components/NButton.vue' },
   { tag: 'NText', specifier: 'nuxt-native/runtime/components/NText.vue' },
   { tag: 'NInput', specifier: 'nuxt-native/runtime/components/NInput.vue' },

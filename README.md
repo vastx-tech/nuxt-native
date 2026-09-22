@@ -44,10 +44,15 @@ tradeoff React Native and Flutter made, applied to the Nuxt/Vue ecosystem.
   safe-area-aware wrappers around NativeScript-Vue's native primitives
   (`<Frame>`, `<ActionBar>`, `<TabStrip>`, ...).
 - **A UI kit** (`<NButton>`, `<NText>`, `<NInput>`, `<NCard>`, `<NSwitch>`,
-  `<NSpinner>`, `<NAvatar>`, `<NBadge>`, `<NDivider>`, `useBottomSheet()`,
-  `useModal()`) — themeable, sensibly-defaulted components on top of the
-  primitives above, so building a real screen doesn't start from
-  `<StackLayout>` and inline styles every time.
+  `<NSpinner>`, `<NAvatar>`, `<NBadge>`, `<NDivider>`, `<NFlex>`,
+  `useBottomSheet()`, `useModal()`) — themeable, sensibly-defaulted
+  components on top of the primitives above, so building a real screen
+  doesn't start from `<StackLayout>` and inline styles every time.
+- **Tailwind, scoped to what NativeScript can actually render** — `create`
+  wires up a real `tailwind.config.cjs`/`postcss.config.cjs`/`app.css`, so
+  `class="flex-col items-center gap-4 bg-indigo-600 rounded-lg p-3"` on an
+  `<NFlex>` or any UI kit component works the same way it would on web. See
+  [UI kit](#ui-kit) below for what's in scope and why.
 - **The `nuxt-native` CLI** generates the on-device bootstrap from
   `app/pages` and hands off to NativeScript's own toolchain (`ns run`,
   `ns build`) for the actual native compile/deploy/LiveSync — that's
@@ -159,6 +164,50 @@ NativeScript-Vue element. `useBottomSheet()`/`useModal()` show any
 component of your own as a bottom sheet or modal via nativescript-vue's
 real `$showModal` — your content component can dismiss itself by importing
 `$closeModal` from `'nativescript-vue'` directly.
+
+### Tailwind
+
+NativeScript's CSS engine only understands a fixed set of properties —
+spacing, color, typography, borders/radius, opacity, shadow, visibility,
+z-index, and flex properties (but only on a real `<FlexboxLayout>`). It has
+no concept of `display`, `position`, `overflow`, or CSS grid at all — those
+are NativeScript layout *containers* (`StackLayout`/`FlexboxLayout`/
+`GridLayout`/`AbsoluteLayout`), never CSS properties. So `create` generates
+a `tailwind.config.cjs` with `corePlugins` as an **allowlist** of only the
+utilities that map to something NativeScript can actually render — running
+Tailwind's full, unfiltered utility set would just generate a lot of classes
+that silently do nothing. It's pinned to Tailwind **v3** specifically,
+since v4 dropped the JS-config `corePlugins` API this relies on.
+
+```vue
+<template>
+  <NPage title="Sign in">
+    <NFlex class="flex-col p-5 gap-4">
+      <NText text="Welcome back" variant="h1" class="text-center" />
+      <NFlex class="flex-row items-center justify-between gap-2 bg-slate-100 rounded-lg p-3">
+        <NText text="Remember me" />
+        <NSwitch v-model="remember" />
+      </NFlex>
+      <NButton text="Sign in" class="bg-indigo-600 rounded-lg p-3" @tap="signIn" />
+    </NFlex>
+  </NPage>
+</template>
+```
+
+`<NFlex>` is a bare `<FlexboxLayout>` wrapper — flex utility classes
+(`flex-row`/`flex-col`, `items-*`, `justify-*`, `gap-*`) only do anything on
+one of these, the same way flex utilities only do anything on a real flex
+container on web. **Not supported**: `grid-*` (NativeScript's grid is
+configured via `columns`/`rows` template strings, not CSS), `absolute`/
+`inset-*`/`top-*` (no CSS `position` concept), and Tailwind's `rotate-*`/
+`scale-*`/`translate-*`/transform utilities (they compose via CSS custom
+properties NativeScript's transform parser doesn't resolve — use the native
+`rotate`/`scaleX`/`translateX` style props directly instead). Verified end
+to end at the pipeline level (real Tailwind + PostCSS output fed through
+the same CSS parser `@nativescript/webpack` uses) — see
+[ARCHITECTURE.md](./ARCHITECTURE.md) for the full trail, including why this
+ships Android-first with iOS's `<FlexboxLayout>` performance deliberately
+left to a real on-device benchmark before it's the default there too.
 
 ## CLI reference
 
