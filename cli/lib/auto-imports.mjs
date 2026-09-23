@@ -48,7 +48,12 @@ const NUXT_NATIVE_COMPOSABLES = [
   { name: 'zIndex', from: 'nuxt-native/runtime/style.js' },
   { name: 'opacity', from: 'nuxt-native/runtime/style.js' },
   { name: 'shade', from: 'nuxt-native/runtime/style.js' },
-  { name: 'tint', from: 'nuxt-native/runtime/style.js' }
+  { name: 'tint', from: 'nuxt-native/runtime/style.js' },
+  { name: 'border', from: 'nuxt-native/runtime/style.js' },
+  { name: 'transform', from: 'nuxt-native/runtime/style.js' },
+  { name: 'align', from: 'nuxt-native/runtime/style.js' },
+  { name: 'elevation', from: 'nuxt-native/runtime/style.js' },
+  { name: 'direction', from: 'nuxt-native/runtime/style.js' }
 ]
 
 /**
