@@ -1,0 +1,96 @@
+# nuxt-native MCP server
+
+An [MCP](https://modelcontextprotocol.io) server exposing `nuxt-native`'s
+dev workflow — build, doctor, lint, clean, analyze, device listing,
+install+launch, log reading — as tools, so any MCP-speaking AI agent
+(Claude Code, Claude Desktop, or anything else that speaks MCP) can drive
+a nuxt-native project directly instead of shelling out to the CLI blind.
+
+Every tool calls the exact same functions the real `nuxt-native` CLI uses
+(`cli/commands/*.mjs`) — nothing here is reimplemented, so there's no way
+for "what the CLI does" and "what an agent driving it through this server
+does" to drift apart.
+
+## Setup
+
+```bash
+cd mcp-server
+npm install
+```
+
+Not published — configure your MCP client to run it straight from this
+checkout. For Claude Code, add to `.mcp.json` (project-level) or your
+user-level MCP config:
+
+```json
+{
+  "mcpServers": {
+    "nuxt-native": {
+      "command": "node",
+      "args": ["/absolute/path/to/nuxt-native/mcp-server/bin/server.mjs"]
+    }
+  }
+}
+```
+
+Every tool takes a `projectPath` argument (the nuxt-native project to act
+on) — the server itself isn't tied to one project, so one running instance
+can drive any number of them across a session.
+
+## Tools
+
+| Tool | Wraps | Notes |
+|---|---|---|
+| `doctor` | `nuxt-native doctor` | Project checks + delegates to `ns info` |
+| `build` | `nuxt-native build <platform>` | `release: true` for a signed build (needs `NUXT_NATIVE_KEYSTORE_*` env vars already set) |
+| `lint` | `nuxt-native lint` | Catches a `navigate()` call to a route that doesn't exist |
+| `clean` | `nuxt-native clean` | Removes `platforms/`, `hooks/`, cached artifacts |
+| `analyze` | `nuxt-native analyze <platform>` | Bundle size report |
+| `list_devices` | `ns device --json` | Every connected device/emulator NativeScript can see |
+| `install_and_launch` | `adb install` + `adb shell am start` | Android only. Uses the most recently built APK under `platforms/android/app/build/outputs/apk/<buildType>/` |
+| `read_logs` | `adb logcat -d` | Optional substring filter — for checking whether a just-deployed build crashed |
+
+## Why stdout capture matters here
+
+This server talks to its client over **stdio** — meaning stdout *is* the
+JSON-RPC protocol channel. `doctor()`/`build()`/etc. weren't written with
+that constraint (they're CLI commands; they `console.log` directly, and
+`ns info`/`ns build`'s own child processes inherit real stdio) — either of
+those writing to stdout mid-tool-call would corrupt the connection.
+
+Fixed at the shared layer, not per-tool: `cli/lib/run.mjs` exports
+`withCapturedOutput()`, which every tool call here goes through. It's an
+ambient, module-level toggle — when set, `run()` pipes and buffers
+instead of inheriting, and `console.log`/`console.error` are captured too
+— restored automatically even if the wrapped function throws. The real
+CLI's own direct terminal usage is completely unaffected (the toggle
+defaults off, and no existing call site needed to change). Verified
+directly, not just reasoned about: ran `doctor()` through it for real and
+confirmed zero output reached the actual process stdout in between, with
+the full report correctly captured instead.
+
+## Verifying it works
+
+```bash
+node test-client.mjs /absolute/path/to/a/nuxt-native/project
+# add --full to also exercise install_and_launch/read_logs
+# (needs a real connected Android device and an existing build)
+```
+
+This is a real MCP client (the SDK's own `Client` + `StdioClientTransport`),
+spawning the real server and driving it over the real protocol — not a
+mock of either side. Verified end to end against a real project: `doctor`
+returns the full captured report, `list_devices` returns real device JSON
+(or the real underlying error — e.g. `list_devices` fails with a genuine
+`ios-device-lib` `ENOENT` on Windows, a real pre-existing NativeScript CLI
+limitation with no iOS tooling here, not a bug in this server), and with
+`--full`, `install_and_launch` + `read_logs` were confirmed against an
+actual physical Android device — real install, real launch, real logcat
+output.
+
+## Status
+
+Android-only in practice so far, same as the rest of this framework —
+`install_and_launch` doesn't attempt an iOS equivalent yet (`xcrun simctl`
+install/launch would be the analogous path, unverified since this was
+built and tested on Windows with no iOS tooling available).

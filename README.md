@@ -380,6 +380,19 @@ over a real TTY (confirmed by reading NativeScript's own source, not
 assumed) — click into that terminal at any point and the same keys work
 by hand too.
 
+## MCP server (agent-driven dev workflow)
+
+`mcp-server/` (see its own README) exposes `nuxt-native`'s dev workflow —
+`doctor`, `build`, `lint`, `clean`, `analyze`, device listing, install +
+launch, log reading — as [MCP](https://modelcontextprotocol.io) tools, so
+any MCP-speaking AI agent (Claude Code, Claude Desktop, anything else that
+speaks MCP) can drive a project directly instead of shelling out blind.
+Every tool calls the same `cli/commands/*.mjs` functions the real CLI
+uses — there's no separate implementation to drift out of sync. Verified
+end to end with a real MCP client driving the real server over the real
+stdio transport, including a real install + launch + logcat read against
+a physical Android device.
+
 ## Repository layout
 
 ```
@@ -387,6 +400,7 @@ src/                the Nuxt module (composables, components, route generation)
 cli/, bin/          the nuxt-native CLI (native bootstrap + ns run/build orchestration)
 playground/         example Nuxt app consuming the module
 vscode-extension/   the VS Code extension (separate package.json/build)
+mcp-server/         MCP server exposing the dev workflow to AI agents (separate package.json)
 ```
 
 ## Contributing

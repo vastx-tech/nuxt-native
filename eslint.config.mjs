@@ -9,7 +9,7 @@ export default createConfigForNuxt({
   // package.json/tsconfig.json/node_modules — only its compiled output
   // needs excluding here (its own `src/` is plain TS, already valid input
   // for this same config).
-  ignores: ['vscode-extension/out/**', 'vscode-extension/node_modules/**']
+  ignores: ['vscode-extension/out/**', 'vscode-extension/node_modules/**', 'mcp-server/node_modules/**']
 }).append({
   // Nuxt's file-based routing names pages by their file (index.vue,
   // [id].vue) — the multi-word rule exists to avoid clashing with native
