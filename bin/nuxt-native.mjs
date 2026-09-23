@@ -8,6 +8,7 @@ import { keystoreCreate } from '../cli/commands/keystore.mjs'
 import { analyze } from '../cli/commands/analyze.mjs'
 import { lint } from '../cli/commands/lint.mjs'
 import { clean } from '../cli/commands/clean.mjs'
+import { version } from '../cli/commands/version.mjs'
 
 const [, , command, ...args] = process.argv
 
@@ -64,6 +65,10 @@ try {
       await clean()
       break
 
+    case 'version':
+      await version(args[0], args[1])
+      break
+
     default:
       printHelp()
       process.exit(command ? 1 : 0)
@@ -93,6 +98,10 @@ Usage:
   nuxt-native analyze <ios|android>   Build with a bundle size report (report/report.html)
   nuxt-native lint                    Check every navigate() call against real routes
   nuxt-native clean                   Remove platforms/, hooks/, and cached native build artifacts
+  nuxt-native version [show]          Show the current version + versionCode
+  nuxt-native version bump <major|minor|patch>
+                                      Bump package.json's version + versionCode, sync to native files
+  nuxt-native version sync            Write the current version/versionCode to native platform files
 
 Flags after <ios|android> are forwarded as-is to the underlying \`ns run\`/
 \`ns build\` command — e.g. a signed Android release:

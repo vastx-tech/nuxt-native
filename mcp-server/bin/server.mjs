@@ -8,6 +8,7 @@ import { build } from '../../cli/commands/build.mjs'
 import { lint } from '../../cli/commands/lint.mjs'
 import { clean } from '../../cli/commands/clean.mjs'
 import { analyze } from '../../cli/commands/analyze.mjs'
+import { version } from '../../cli/commands/version.mjs'
 import { loadNativeConfig } from '../../cli/lib/load-config.mjs'
 import { listDevices } from '../src/devices.mjs'
 import { findApk, installApk, launchApp, readLogs } from '../src/android.mjs'
@@ -107,6 +108,23 @@ server.registerTool(
   },
   async ({ projectPath, platform }) => {
     const { output, exitCode } = await runInProject(projectPath, () => analyze(platform))
+    return textResult(`${output}\n(exit code: ${exitCode})`)
+  }
+)
+
+server.registerTool(
+  'version',
+  {
+    title: 'Show or bump the app release version',
+    description: 'Runs `nuxt-native version` — show the current version/versionCode, bump it (major/minor/patch, syncs to App_Resources/Android/app.gradle and App_Resources/iOS/Info.plist if present), or just re-sync the current values.',
+    inputSchema: {
+      projectPath: z.string(),
+      action: z.enum(['show', 'bump', 'sync']).default('show'),
+      part: z.enum(['major', 'minor', 'patch']).optional().describe('Required when action is "bump"')
+    }
+  },
+  async ({ projectPath, action, part }) => {
+    const { output, exitCode } = await runInProject(projectPath, () => version(action, part))
     return textResult(`${output}\n(exit code: ${exitCode})`)
   }
 )

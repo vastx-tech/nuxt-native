@@ -356,6 +356,9 @@ nuxt-native keystore create --alias <name> [--output ./release.keystore]
 nuxt-native analyze <ios|android>    # bundle size report → report/report.html
 nuxt-native lint                     # catch a navigate() call to a route that doesn't exist
 nuxt-native clean                    # remove platforms/, hooks/, and cached build artifacts
+nuxt-native version [show]           # show the current version + versionCode
+nuxt-native version bump <major|minor|patch>
+nuxt-native version sync             # write the current version to native platform files
 ```
 
 `dev`/`build` forward any flags after `<ios|android>` straight to the real
@@ -368,6 +371,36 @@ npx nuxt-native keystore create --alias my-app
 # then, once NUXT_NATIVE_KEYSTORE_* is set in your shell/CI secrets:
 npx nuxt-native build android --release
 ```
+
+## App release versioning
+
+`package.json`'s own `version` field (standard semver) is the single
+source of truth, plus a `nativeVersionCode` field for Android's separate
+integer build number (Play Store requires it to only ever increase, which
+a semver string alone can't express — e.g. two releases can share a
+patch-bumped version but still need distinct versionCodes).
+
+```bash
+npx nuxt-native version              # show the current version + versionCode
+npx nuxt-native version bump patch   # 1.0.0 (1) -> 1.0.1 (2), synced automatically
+npx nuxt-native version sync         # re-sync current values without bumping
+```
+
+`bump`/`sync` write `android.defaultConfig.versionCode`/`versionName` into
+`App_Resources/Android/app.gradle` (a real Gradle `apply from:` include
+NativeScript's own build already supports — confirmed, not guessed) rather
+than editing the manifest directly, since `platforms/android/app/src/main/
+AndroidManifest.xml` gets regenerated from `@nativescript/android`'s own
+template on every `ns platform add` and wouldn't survive. AGP's
+`defaultConfig` always wins over the manifest's own `android:versionCode`/
+`versionName` attributes, so this is the standard, sanctioned override
+mechanism, not a workaround. Only touches `App_Resources/iOS/Info.plist`
+if that platform was actually added. Idempotent via a marked block, so a
+project's own `app.gradle` customizations outside it are never touched.
+Verified end to end: a real `bump patch` → real `gradlew.bat assembleDebug`
+→ `aapt dump badging` on the resulting APK confirmed `versionCode='2'
+versionName='1.0.1'` actually landed in the compiled app, not just the
+source files.
 
 ## VS Code extension
 

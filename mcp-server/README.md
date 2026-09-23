@@ -46,6 +46,7 @@ can drive any number of them across a session.
 | `lint` | `nuxt-native lint` | Catches a `navigate()` call to a route that doesn't exist |
 | `clean` | `nuxt-native clean` | Removes `platforms/`, `hooks/`, cached artifacts |
 | `analyze` | `nuxt-native analyze <platform>` | Bundle size report |
+| `version` | `nuxt-native version [show\|bump\|sync]` | Show/bump/sync the release version — see the main README's "App release versioning" section |
 | `list_devices` | `ns device --json` | Every connected device/emulator NativeScript can see |
 | `install_and_launch` | `adb install` + `adb shell am start` | Android only. Uses the most recently built APK under `platforms/android/app/build/outputs/apk/<buildType>/` |
 | `read_logs` | `adb logcat -d` | Optional substring filter — for checking whether a just-deployed build crashed |
