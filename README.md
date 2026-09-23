@@ -404,17 +404,25 @@ confirmed as NativeScript's real, standard convention by reading three
 independent usages in `@nativescript/core`'s own source before writing
 this, not invented.
 
-**Verification status, honestly**: the Android implementation compiles
-cleanly through a real webpack build (including catching and fixing the
-`.js`-suffix resolution issue above) and typechecks correctly against
-`@nativescript/types`. A real Gradle build and an on-device confirmation
-were both still pending when this was built — the development machine hit
-a genuine, severe memory constraint (5.74 GB total RAM, shared with other
-real work) partway through, and no device was connected at that point
-either. The iOS implementation is additionally unverified in the same way
-every other iOS code path in this framework is (no Xcode/macOS access at
-all) — a real, best-effort implementation against Apple's documented API,
-not a stub, but not compiled or run.
+**Verification status, honestly**: the Android implementation is fully
+verified on real hardware — real webpack build, real `gradlew.bat
+assembleDebug`, real `adb install` onto a physically connected device, a
+real Node.js WebSocket server bridged over USB via `adb reverse`. On
+launch the app logged a real `open` event and the server's own greeting
+message, received live; tapping a real on-screen button sent a real
+message that the server logged and echoed back, and the device logged the
+echo. Two real bugs were only caught this way, not by compiling: OkHttp
+5.x's split `okhttp-android` artifact needs `compileSdk` 37+ (this
+project defaults to 35), fixed by pinning to OkHttp 4.12.0; and Android
+blocks cleartext (`ws://`) traffic by default for apps targeting API 28+,
+fixed with a debug-only network security config permitting cleartext to
+`127.0.0.1`/`10.0.2.2`/`localhost` (`nuxt-native init` wires this up
+automatically, same as the OkHttp dependency — see `ARCHITECTURE.md` for
+the full detail). Production apps should use `wss://` regardless; the
+cleartext exception only applies to debug builds. The iOS implementation
+is unverified in the same way every other iOS code path in this framework
+is (no Xcode/macOS access at all) — a real, best-effort implementation
+against Apple's documented API, not a stub, but not compiled or run.
 
 ## Gradle memory tuning
 

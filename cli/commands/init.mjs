@@ -8,6 +8,7 @@ import { applySplashBranding } from '../lib/splash.mjs'
 import { ensureTailwindSetup } from '../lib/tailwind-setup.mjs'
 import { ensureGradleMemorySettings } from '../lib/gradle-tuning.mjs'
 import { ensureWebSocketDependency } from '../lib/websocket-setup.mjs'
+import { ensureNetworkSecurityConfig } from '../lib/network-security-setup.mjs'
 import { run } from '../lib/run.mjs'
 
 export async function init({ platforms } = {}) {
@@ -70,6 +71,9 @@ export async function init({ platforms } = {}) {
   if (targets.includes('android')) {
     ensureWebSocketDependency(process.cwd())
     console.log('[nuxt-native] Added OkHttp (for useWebSocket()) to App_Resources/Android/app.gradle')
+
+    ensureNetworkSecurityConfig(process.cwd())
+    console.log('[nuxt-native] Added a debug-only cleartext exception for useWebSocket() dev servers (127.0.0.1/10.0.2.2/localhost)')
   }
 
   console.log('[nuxt-native] Init complete. Next: nuxt-native dev <ios|android>')
