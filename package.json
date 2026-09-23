@@ -9,7 +9,8 @@
       "types": "./dist/types.d.mts",
       "import": "./dist/module.mjs"
     },
-    "./runtime/*": "./dist/runtime/*"
+    "./runtime/*": "./dist/runtime/*",
+    "./cli/*": "./cli/*"
   },
   "main": "./dist/module.mjs",
   "types": "./dist/types.d.mts",

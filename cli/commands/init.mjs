@@ -5,10 +5,7 @@ import { ensureNativeScriptConfig } from '../lib/nativescript-config.mjs'
 import { ensureWebpackConfig } from '../lib/webpack-config.mjs'
 import { generateEntry } from '../lib/generate-entry.mjs'
 import { applySplashBranding } from '../lib/splash.mjs'
-import { ensureTailwindSetup } from '../lib/tailwind-setup.mjs'
-import { ensureGradleMemorySettings } from '../lib/gradle-tuning.mjs'
-import { ensureWebSocketDependency } from '../lib/websocket-setup.mjs'
-import { ensureNetworkSecurityConfig } from '../lib/network-security-setup.mjs'
+import { ensureProjectSetup } from '../lib/ensure-project-setup.mjs'
 import { run } from '../lib/run.mjs'
 
 export async function init({ platforms } = {}) {
@@ -20,9 +17,6 @@ export async function init({ platforms } = {}) {
 
   const webpackConfigPath = ensureWebpackConfig(process.cwd())
   console.log(`[nuxt-native] webpack config ready at ${webpackConfigPath}`)
-
-  await ensureTailwindSetup(process.cwd())
-  console.log('[nuxt-native] Tailwind config ready (tailwind.config.cjs/postcss.config.cjs/app/app.css)')
 
   generateEntry({ pagesDir: 'app/pages' })
   console.log('[nuxt-native] Generated .nuxt-native/ bootstrap from app/pages')
@@ -52,29 +46,12 @@ export async function init({ platforms } = {}) {
   applySplashBranding(join(process.cwd(), 'App_Resources'), targets)
   console.log('[nuxt-native] Applied Nuxt Native splash screen branding')
 
-  // Also runs unconditionally (idempotent via its own marker check): the
-  // stock @nativescript/android template ships a flat 16 GB Gradle daemon
-  // heap ceiling regardless of the machine's real specs, which is a real
-  // problem on small machines specifically. Only patches platforms/android/
-  // gradle.properties once, and never overwrites a value the project has
-  // since customized itself.
-  ensureGradleMemorySettings(join(process.cwd(), 'platforms'), targets)
-  console.log('[nuxt-native] Tuned Gradle memory settings for this machine')
-
-  // Unconditional, like the two settings above: OkHttp is a small (~750
-  // KB), extremely common Android dependency (most real apps already pull
-  // it in transitively via something else), and useWebSocket() needs it
-  // present to interop with regardless of whether a given app actually
-  // calls it — matching the "batteries included" UI-kit-style default
-  // this framework already takes elsewhere, rather than gating it behind
-  // detecting real usage.
-  if (targets.includes('android')) {
-    ensureWebSocketDependency(process.cwd())
-    console.log('[nuxt-native] Added OkHttp (for useWebSocket()) to App_Resources/Android/app.gradle')
-
-    ensureNetworkSecurityConfig(process.cwd())
-    console.log('[nuxt-native] Added a debug-only cleartext exception for useWebSocket() dev servers (127.0.0.1/10.0.2.2/localhost)')
-  }
+  // Everything below is safe to call on every init/dev/build, not just a
+  // project's first init — see ensure-project-setup.mjs. Called here too
+  // (not only from dev/build) so `nuxt-native init` alone still leaves a
+  // project fully configured, matching its documented behavior before
+  // this was factored out.
+  await ensureProjectSetup(process.cwd(), config, targets)
 
   console.log('[nuxt-native] Init complete. Next: nuxt-native dev <ios|android>')
 }

@@ -1,0 +1,36 @@
+import { join } from 'node:path'
+import { ensureTailwindSetup } from './tailwind-setup.mjs'
+import { ensureGradleMemorySettings } from './gradle-tuning.mjs'
+import { ensureWebSocketDependency } from './websocket-setup.mjs'
+import { ensureNetworkSecurityConfig } from './network-security-setup.mjs'
+import { runPluginSetup } from './plugins.mjs'
+
+/**
+ * Every idempotent native-project patch this framework needs, run on
+ * every init/dev/build — not just init. Previously these only ran inside
+ * `init()`, which meant a project only stayed correctly configured if
+ * someone remembered to rerun `nuxt-native init` after adding a
+ * dependency (ours or a third-party plugin's) later in the project's
+ * life. Every function called here is already safe to call on every
+ * single invocation (marker-comment-gated, or a plain existence check —
+ * confirmed via real, repeated reruns earlier in this framework's
+ * development), so there's no cost to running them unconditionally
+ * instead of only once.
+ */
+export async function ensureProjectSetup(projectRoot, config, platforms) {
+  await ensureTailwindSetup(projectRoot)
+  console.log('[nuxt-native] Tailwind config ready (tailwind.config.cjs/postcss.config.cjs/app/app.css)')
+
+  if (platforms.includes('android')) {
+    ensureGradleMemorySettings(join(projectRoot, 'platforms'), platforms)
+    console.log('[nuxt-native] Tuned Gradle memory settings for this machine')
+
+    ensureWebSocketDependency(projectRoot)
+    console.log('[nuxt-native] Added OkHttp (for useWebSocket()) to App_Resources/Android/app.gradle')
+
+    ensureNetworkSecurityConfig(projectRoot)
+    console.log('[nuxt-native] Added a debug-only cleartext exception for useWebSocket() dev servers (127.0.0.1/10.0.2.2/localhost)')
+  }
+
+  await runPluginSetup(projectRoot, config.plugins, platforms)
+}

@@ -25,7 +25,8 @@ export default defineNuxtModule<NuxtNativeOptions>({
     appId: 'org.nuxtnative.app',
     appName: 'NuxtNativeApp',
     platforms: ['ios', 'android'],
-    entry: 'app/app.vue'
+    entry: 'app/app.vue',
+    plugins: []
   },
   setup(options, nuxt) {
     const resolver = createResolver(import.meta.url)

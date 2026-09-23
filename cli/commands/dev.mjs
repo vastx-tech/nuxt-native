@@ -1,4 +1,6 @@
 import { generateEntry } from '../lib/generate-entry.mjs'
+import { loadNativeConfig } from '../lib/load-config.mjs'
+import { ensureProjectSetup } from '../lib/ensure-project-setup.mjs'
 import { run } from '../lib/run.mjs'
 
 /**
@@ -12,6 +14,15 @@ export async function dev(platform, nsArgs = []) {
   }
 
   generateEntry({ pagesDir: 'app/pages' })
+
+  // Same idempotent setup init() runs, called again here: a project stays
+  // correctly configured (Gradle tuning, WebSocket's OkHttp dependency,
+  // any third-party plugin's native setup, ...) even if a plugin was
+  // added after the last `nuxt-native init`, without needing to remember
+  // to rerun it by hand. See ensure-project-setup.mjs.
+  const config = await loadNativeConfig()
+  await ensureProjectSetup(process.cwd(), config, [platform])
+
   console.log(`[nuxt-native] Bootstrap regenerated. Handing off to NativeScript's LiveSync (ns run ${platform})...`)
 
   // `ns run` builds, deploys to the connected device/simulator, and

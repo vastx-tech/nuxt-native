@@ -444,6 +444,68 @@ since customized yourself) and never touches the file again after that.
 Verified with a real, full clean rebuild after applying it — succeeded
 identically with a fraction of the memory.
 
+The generated `webpack.config.cjs` gets the same treatment for
+`ForkTsCheckerWebpackPlugin` (a separate Node process `@nativescript/webpack`
+spawns just for type-checking, defaulting to a flat 4 GB memory limit): on a
+machine with less than 8 GB of RAM it's removed entirely (the main build
+already runs `ts-loader` with `transpileOnly: true`, so nothing about the
+actual compile depends on it — you still get type errors from your editor
+or a `vue-tsc`/`tsc` run), and above that threshold its memory limit is
+scaled to the machine instead of left at the flat default.
+
+## Auto-imports
+
+Composables — both nuxt-native's own (`useDevice`, `useWebSocket`, ...) and
+anything you add yourself under `app/composables/` — are usable in any page
+or component with no `import` statement, the same DX Nuxt itself gives you
+for its own build:
+
+```vue
+<script setup lang="ts">
+const device = useDevice()
+const { connected } = useWebSocket('wss://your-server.example.com/socket')
+</script>
+```
+
+This isn't Nuxt's own `unimport`/auto-import machinery running under the
+hood (that package is ESM-only, and the native build's `webpack.config.cjs`
+is loaded with a plain synchronous `require()` that can't consume it) — it's
+a small first-party webpack loader that does the same thing: a fast scan for
+composable names actually used in a file, skipping anything already
+imported or declared locally, then injecting the right import. Regenerated
+automatically on every `init`/`dev`/`build`, so a composable you add to
+`app/composables/` is picked up on the very next run.
+
+One real limitation: only composables are covered, not your own custom
+`.vue` components — those still need a normal explicit import (auto-
+importing components is a different mechanism in real Nuxt, not this one).
+
+## Plugins
+
+A "nuxt-native plugin" is just an ordinary npm package that exports one or
+more `useXxx()` composables — install it like anything else. If it needs
+native setup (a Gradle dependency, an Android permission, an iOS
+`Info.plist` entry, ...), list it in `nuxt.config.ts`:
+
+```ts
+export default defineNuxtConfig({
+  native: {
+    plugins: ['some-nuxt-native-plugin']
+  }
+})
+```
+
+`nuxt-native init`/`dev`/`build` will then look for a `"./nuxt-native"`
+subpath export on that package (it needs to declare this in its own
+`package.json`'s `exports` map) and, if present, call its
+`ensure(projectRoot, platforms)` function — the same idempotent pattern
+this framework uses for its own native setup (OkHttp for `useWebSocket()`,
+the cleartext network exception, etc.), so it's safe to run on every
+build, not just the first one. A plugin with no such export is left alone
+— most plugins (anything that's pure JS/TS interop, or that wraps an
+already-installed NativeScript plugin needing no extra native config)
+don't need one.
+
 ## CLI reference
 
 ```bash

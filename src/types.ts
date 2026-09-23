@@ -13,6 +13,16 @@ export interface NuxtNativeOptions {
    * `nativescript-vue` mounts as the app's first Frame/Page.
    */
   entry: string
+  /**
+   * npm package names of third-party nuxt-native plugins to run native
+   * setup for. Each listed package is resolved for a `"./nuxt-native"`
+   * subpath export — if present, its `ensure(projectRoot, platforms)`
+   * function is called on every `init`/`dev`/`build` (idempotent, same as
+   * this framework's own `ensureWebSocketDependency`/
+   * `ensureNetworkSecurityConfig`). A package with no such subpath is left
+   * alone — not every plugin needs native dependency/permission wiring.
+   */
+  plugins: string[]
 }
 
 declare module '@nuxt/schema' {

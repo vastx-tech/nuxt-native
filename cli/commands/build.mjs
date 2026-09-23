@@ -1,4 +1,6 @@
 import { generateEntry } from '../lib/generate-entry.mjs'
+import { loadNativeConfig } from '../lib/load-config.mjs'
+import { ensureProjectSetup } from '../lib/ensure-project-setup.mjs'
 import { run } from '../lib/run.mjs'
 
 /**
@@ -17,6 +19,11 @@ export async function build(platform, nsArgs = []) {
   }
 
   generateEntry({ pagesDir: 'app/pages' })
+
+  // Same idempotent setup init() runs — see dev.mjs's comment and
+  // ensure-project-setup.mjs.
+  const config = await loadNativeConfig()
+  await ensureProjectSetup(process.cwd(), config, [platform])
 
   const finalArgs = [...nsArgs]
   if (finalArgs.includes('--release') && !finalArgs.some(arg => arg.startsWith('--key-store'))) {

@@ -4,7 +4,8 @@ const defaults = {
   appId: 'org.nuxtnative.app',
   appName: 'NuxtNativeApp',
   platforms: ['ios', 'android'],
-  entry: 'app/app.vue'
+  entry: 'app/app.vue',
+  plugins: []
 }
 
 /**
