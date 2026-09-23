@@ -324,6 +324,46 @@ assume a DOM/SSR context that doesn't exist here. Pinia works because its
 actual logic has neither dependency; before adding another module, check
 whether the same is true for it.
 
+## MCP client (`useMcpClient()`)
+
+Apps built with nuxt-native can connect to [MCP](https://modelcontextprotocol.io)
+servers and call their tools — e.g. building an AI-assistant mobile app.
+
+```vue
+<script setup lang="ts">
+import { useMcpClient } from 'nuxt-native/runtime/composables/useMcpClient.js'
+
+const mcp = useMcpClient()
+await mcp.connect('https://your-mcp-server.example.com/mcp')
+const tools = await mcp.listTools()
+const result = await mcp.callTool('search', { query: 'nuxt native' })
+</script>
+```
+
+This implements MCP's "Streamable HTTP" transport in its non-streaming
+mode — the only mode a NativeScript app can actually speak. Confirmed
+directly against a real device (not assumed): NativeScript's runtime has
+`fetch`/`XMLHttpRequest` but no `WebSocket` and no `EventSource`, which
+rules out MCP's stdio/WebSocket transports and the streaming half of
+Streamable HTTP (server-initiated messages need `EventSource`-style SSE
+parsing). What's left — POST a JSON-RPC message, read an `application/json`
+response directly — is fully spec-compliant, confirmed against the real
+MCP TypeScript SDK's own client transport as exactly the code path it
+falls back to itself against a non-streaming server, not a simplification
+invented here. A server that insists on streaming responses gets a clear
+error, not a silent hang.
+
+Verified against a real MCP server (`mcp-server/test-http-server.mjs`,
+also useful for testing your own MCP-powered pages locally): the full
+`initialize` → `notifications/initialized` → `tools/list` → `tools/call`
+sequence, session ID correctly captured and echoed, run with plain
+`fetch` — the same API surface the device has. Compiles cleanly through
+the real native webpack build alongside a real, full-sized app. Not yet
+confirmed inside an actual compiled app running on a physical device
+against a network-reachable server (needs real network topology this
+session didn't have set up) — everything short of that on-device run is
+verified.
+
 ## Gradle memory tuning
 
 `nuxt-native init` also patches `platforms/android/gradle.properties` once,
