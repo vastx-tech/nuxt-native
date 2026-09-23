@@ -6,6 +6,7 @@ import { ensureWebpackConfig } from '../lib/webpack-config.mjs'
 import { generateEntry } from '../lib/generate-entry.mjs'
 import { applySplashBranding } from '../lib/splash.mjs'
 import { ensureTailwindSetup } from '../lib/tailwind-setup.mjs'
+import { ensureGradleMemorySettings } from '../lib/gradle-tuning.mjs'
 import { run } from '../lib/run.mjs'
 
 export async function init({ platforms } = {}) {
@@ -48,6 +49,15 @@ export async function init({ platforms } = {}) {
   // loop above was a no-op) but was never branded yet.
   applySplashBranding(join(process.cwd(), 'App_Resources'), targets)
   console.log('[nuxt-native] Applied Nuxt Native splash screen branding')
+
+  // Also runs unconditionally (idempotent via its own marker check): the
+  // stock @nativescript/android template ships a flat 16 GB Gradle daemon
+  // heap ceiling regardless of the machine's real specs, which is a real
+  // problem on small machines specifically. Only patches platforms/android/
+  // gradle.properties once, and never overwrites a value the project has
+  // since customized itself.
+  ensureGradleMemorySettings(join(process.cwd(), 'platforms'), targets)
+  console.log('[nuxt-native] Tuned Gradle memory settings for this machine')
 
   console.log('[nuxt-native] Init complete. Next: nuxt-native dev <ios|android>')
 }

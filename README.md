@@ -324,6 +324,26 @@ assume a DOM/SSR context that doesn't exist here. Pinia works because its
 actual logic has neither dependency; before adding another module, check
 whether the same is true for it.
 
+## Gradle memory tuning
+
+`nuxt-native init` also patches `platforms/android/gradle.properties` once,
+right after `ns platform add` scaffolds it: the stock `@nativescript/android`
+template ships `org.gradle.jvmargs=-Xmx16384M` — a flat 16 GB Gradle daemon
+heap ceiling, regardless of the machine actually running the build. On a
+real machine with 5.74 GB of *total* RAM, that's a heap ceiling triple the
+entire machine's physical memory, and a very plausible cause of otherwise
+mysterious build flakiness (Windows can fail to spawn new processes under
+severe memory pressure).
+
+The replacement is computed from the machine's actual total RAM (35% of
+it, clamped to 768 MB–3 GB — there's no real benefit to a NativeScript
+app's build ever exceeding ~3 GB of daemon heap), plus `kotlin.daemon.jvmargs`
+and `org.gradle.workers.max=2` to cap the other JVMs Gradle spins up. It's
+written once (marked with a comment so reruns don't clobber a value you've
+since customized yourself) and never touches the file again after that.
+Verified with a real, full clean rebuild after applying it — succeeded
+identically with a fraction of the memory.
+
 ## CLI reference
 
 ```bash
