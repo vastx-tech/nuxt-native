@@ -85,7 +85,19 @@ module.exports = function autoImportLoader(source) {
 
   const missing = entries.filter(({ name }) => {
     if (!new RegExp(`\\b${name}\\b`).test(source)) return false
-    const alreadyImported = new RegExp(`\\bimport\\b[^;]*\\b${name}\\b[^;]*\\bfrom\\b`).test(source)
+    // Bounded to a single line ([^\n]*), not "until the next semicolon"
+    // ([^;]*, this file's own earlier, real bug): semicolon-free code style
+    // (common, and used throughout this framework's own generated/example
+    // code) has no semicolon to bound the scan at all, so a `[^;]*` version
+    // of this check can span the *entire rest of the file* looking for a
+    // later "from" — including through comments that happen to mention the
+    // name, producing a false "already imported" match and silently
+    // dropping a real, needed import. Reproduced directly: a doc comment
+    // in this file's own reference app (mentioning `formatCurrency` before
+    // its real usage) triggered exactly this, confirmed by inspecting the
+    // compiled bundle and finding a bare, unresolved reference — a real
+    // on-device crash, not a hypothetical.
+    const alreadyImported = new RegExp(`^[^\\n]*\\bimport\\b[^\\n]*\\b${name}\\b[^\\n]*\\bfrom\\b`, 'm').test(source)
     const declaredLocally = new RegExp(`\\b(?:function|const|let|var)\\s+${name}\\b`).test(source)
     return !alreadyImported && !declaredLocally
   })

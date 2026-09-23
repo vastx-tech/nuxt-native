@@ -1,12 +1,20 @@
 <template>
-  <NCard padding="md" @tap="$emit('tap')">
+  <NCard padding="md">
     <NFlex class="flex-col gap-2">
-      <NText :text="product.name" variant="h3" weight="semibold" />
-      <NText :text="product.description" variant="caption" color="#64748b" />
-      <NFlex class="flex-row items-center justify-between">
+      <!-- @tap lives on this inner wrapper, not the NCard, and the
+           NButton below is a sibling to it, not a descendant — nesting a
+           tappable NButton inside an @tap-bearing ancestor was confirmed
+           on a real device to fire BOTH handlers from one tap
+           (NativeScript's tap gesture doesn't stop propagation to an
+           ancestor's own separately-registered listener the way DOM
+           events do), so "Add to cart" was also silently navigating away.
+           Keeping the tap targets siblings avoids that entirely. -->
+      <NFlex class="flex-col gap-2" @tap="$emit('tap')">
+        <NText :text="product.name" variant="h3" weight="semibold" />
+        <NText :text="product.description" variant="caption" color="#64748b" />
         <NText :text="price" variant="body" weight="semibold" />
-        <NButton text="Add to cart" size="sm" @tap="$emit('add')" />
       </NFlex>
+      <NButton text="Add to cart" size="sm" @tap="$emit('add')" />
     </NFlex>
   </NCard>
 </template>

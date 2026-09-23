@@ -15,7 +15,7 @@ export async function init({ platforms } = {}) {
   const configPath = ensureNativeScriptConfig(process.cwd(), config)
   console.log(`[nuxt-native] nativescript.config.ts ready at ${configPath}`)
 
-  const webpackConfigPath = ensureWebpackConfig(process.cwd())
+  const webpackConfigPath = ensureWebpackConfig(process.cwd(), config.appId)
   console.log(`[nuxt-native] webpack config ready at ${webpackConfigPath}`)
 
   generateEntry({ pagesDir: 'app/pages' })

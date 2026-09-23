@@ -1,5 +1,6 @@
 const path = require('node:path')
 const webpack = require('@nativescript/webpack')
+const NuxtNativeAppIdentifierPlugin = require('nuxt-native/cli/lib/app-identifier-webpack-plugin.cjs')
 
 module.exports = (env) => {
   webpack.init(env)
@@ -98,6 +99,12 @@ module.exports = (env) => {
       })
     }
   }, { order: 10 })
+
+  webpack.chainWebpack((config) => {
+    config
+      .plugin('nuxt-native-app-identifier')
+      .use(NuxtNativeAppIdentifierPlugin, [{ appId: "com.example.referenceapp" }])
+  })
 
   return webpack.resolveConfig()
 }

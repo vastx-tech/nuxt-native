@@ -38,13 +38,25 @@ export const WEBPACK_CONFIG_FILENAME = 'webpack.config.cjs'
  * specifier to this project's own CLI-generated `.nuxt-native/
  * route-manifest.mjs` lets the identical composable source resolve
  * correctly in both contexts without forking it.
+ *
+ * `appId` gets embedded directly into the generated file (not read at
+ * build time from `nativescript.config.ts`, to avoid this CJS config
+ * file needing to parse a `.ts` file itself): it's passed to
+ * `NuxtNativeAppIdentifierPlugin` (see app-identifier-webpack-plugin.cjs),
+ * which writes `<output>/package.json` with the project's real app id
+ * and whatever entry chunk filename webpack actually emitted —
+ * NativeScript's native runtime bootstrap reads that exact file at
+ * launch to find the app's entry point and its real package name (a
+ * real crash — "Application entry point file not found" — confirmed
+ * this file's absence is fatal, not just a Gradle-time concern).
  */
-export function ensureWebpackConfig(projectRoot) {
+export function ensureWebpackConfig(projectRoot, appId) {
   const configPath = join(projectRoot, WEBPACK_CONFIG_FILENAME)
   if (existsSync(configPath)) return configPath
 
   writeFileSync(configPath, `const path = require('node:path')
 const webpack = require('@nativescript/webpack')
+const NuxtNativeAppIdentifierPlugin = require('nuxt-native/cli/lib/app-identifier-webpack-plugin.cjs')
 
 module.exports = (env) => {
   webpack.init(env)
@@ -143,6 +155,12 @@ module.exports = (env) => {
       })
     }
   }, { order: 10 })
+
+  webpack.chainWebpack((config) => {
+    config
+      .plugin('nuxt-native-app-identifier')
+      .use(NuxtNativeAppIdentifierPlugin, [{ appId: ${JSON.stringify(appId)} }])
+  })
 
   return webpack.resolveConfig()
 }
