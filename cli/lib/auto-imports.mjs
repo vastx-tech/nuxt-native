@@ -23,6 +23,10 @@ import { basename, extname, join } from 'node:path'
  * the same limitation any React Native project with `.ios.ts`/`.android.ts`
  * splits lives with in an editor too.
  */
+// Despite the name, also covers plain (non-"use"-prefixed) auto-imported
+// helpers now — the style-object functions from src/runtime/style.ts.
+// The auto-import loader itself doesn't distinguish composables from
+// plain functions; this list just grew to cover both.
 const NUXT_NATIVE_COMPOSABLES = [
   { name: 'useWebSocket', from: 'nuxt-native/runtime/composables/useWebSocket', typesFrom: 'nuxt-native/runtime/composables/useWebSocket.android.js' },
   { name: 'useCamera', from: 'nuxt-native/runtime/composables/useCamera.js' },
@@ -32,7 +36,19 @@ const NUXT_NATIVE_COMPOSABLES = [
   { name: 'useModal', from: 'nuxt-native/runtime/composables/useModal.js' },
   { name: 'useNativeRouter', from: 'nuxt-native/runtime/composables/useNativeRouter.js' },
   { name: 'useSafeArea', from: 'nuxt-native/runtime/composables/useSafeArea.js' },
-  { name: 'useMcpClient', from: 'nuxt-native/runtime/composables/useMcpClient.js' }
+  { name: 'useMcpClient', from: 'nuxt-native/runtime/composables/useMcpClient.js' },
+  { name: 'padding', from: 'nuxt-native/runtime/style.js' },
+  { name: 'margin', from: 'nuxt-native/runtime/style.js' },
+  { name: 'bg', from: 'nuxt-native/runtime/style.js' },
+  { name: 'textStyle', from: 'nuxt-native/runtime/style.js' },
+  { name: 'box', from: 'nuxt-native/runtime/style.js' },
+  { name: 'size', from: 'nuxt-native/runtime/style.js' },
+  { name: 'flex', from: 'nuxt-native/runtime/style.js' },
+  { name: 'visible', from: 'nuxt-native/runtime/style.js' },
+  { name: 'zIndex', from: 'nuxt-native/runtime/style.js' },
+  { name: 'opacity', from: 'nuxt-native/runtime/style.js' },
+  { name: 'shade', from: 'nuxt-native/runtime/style.js' },
+  { name: 'tint', from: 'nuxt-native/runtime/style.js' }
 ]
 
 /**
