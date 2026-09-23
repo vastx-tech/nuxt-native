@@ -1,6 +1,7 @@
 import { join } from 'node:path'
 import { ensureTailwindSetup } from './tailwind-setup.mjs'
 import { ensureGradleMemorySettings } from './gradle-tuning.mjs'
+import { ensureManifestNamespaceFix } from './manifest-namespace-fix.mjs'
 import { ensureWebSocketDependency } from './websocket-setup.mjs'
 import { ensureNetworkSecurityConfig } from './network-security-setup.mjs'
 import { runPluginSetup } from './plugins.mjs'
@@ -24,6 +25,8 @@ export async function ensureProjectSetup(projectRoot, config, platforms) {
   if (platforms.includes('android')) {
     ensureGradleMemorySettings(join(projectRoot, 'platforms'), platforms)
     console.log('[nuxt-native] Tuned Gradle memory settings for this machine')
+
+    ensureManifestNamespaceFix(join(projectRoot, 'platforms'), platforms)
 
     ensureWebSocketDependency(projectRoot)
     console.log('[nuxt-native] Added OkHttp (for useWebSocket()) to App_Resources/Android/app.gradle')

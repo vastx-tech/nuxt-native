@@ -2,7 +2,7 @@ import { createRequire } from 'node:module'
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { scanPages } from './scan-pages.mjs'
-import { collectAutoImportEntries } from './auto-imports.mjs'
+import { collectAutoImportEntries, renderAutoImportTypes } from './auto-imports.mjs'
 
 const OUT_DIR = '.nuxt-native'
 
@@ -63,7 +63,9 @@ export function generateEntry({ projectRoot = process.cwd(), pagesDir = 'app/pag
   // composable added to app/composables/ after the project's
   // webpack.config.cjs was first written is picked up on the very next
   // build/dev run without needing that static config file rewritten.
-  writeFileSync(join(outDir, 'auto-imports.json'), JSON.stringify(collectAutoImportEntries(projectRoot)))
+  const autoImportEntries = collectAutoImportEntries(projectRoot)
+  writeFileSync(join(outDir, 'auto-imports.json'), JSON.stringify(autoImportEntries))
+  writeFileSync(join(outDir, 'auto-imports.d.ts'), renderAutoImportTypes(autoImportEntries))
 
   return { routes, initial, outDir }
 }

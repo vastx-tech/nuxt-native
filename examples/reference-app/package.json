@@ -1,0 +1,25 @@
+{
+  "name": "nuxt-native-reference-app",
+  "private": true,
+  "main": ".nuxt-native/app.js",
+  "scripts": {
+    "native:init": "nuxt-native init",
+    "native:dev:ios": "nuxt-native dev ios",
+    "native:dev:android": "nuxt-native dev android",
+    "native:build:ios": "nuxt-native build ios --release",
+    "native:build:android": "nuxt-native build android --release"
+  },
+  "dependencies": {
+    "nuxt-native": "file:../..",
+    "nativescript-vue": "^3.1.2",
+    "@nativescript/core": "^9.1.2",
+    "nuxt": "^4.0.0",
+    "pinia": "^4.0.3"
+  },
+  "devDependencies": {
+    "@nativescript/webpack": "~5.0.38",
+    "typescript": "~5.8.0",
+    "tailwindcss": "^3.4.19",
+    "postcss": "^8.5.28"
+  }
+}

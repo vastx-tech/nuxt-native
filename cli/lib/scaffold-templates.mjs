@@ -148,7 +148,13 @@ export function tsconfig() {
         'app/**/*.vue',
         '.nuxt-native/**/*.js',
         '.nuxt-native/**/*.mjs',
-        '.nuxt-native/**/*.vue'
+        '.nuxt-native/**/*.vue',
+        // Ambient auto-import declarations (see auto-imports.mjs's
+        // renderAutoImportTypes) — without this, vue-tsc/the editor's TS
+        // server would flag every auto-imported composable/util as
+        // "Cannot find name", even though the actual build resolves them
+        // correctly via the auto-import webpack loader.
+        '.nuxt-native/**/*.d.ts'
       ]
     },
     null,
@@ -302,14 +308,8 @@ export function indexPage() {
 </template>
 
 <script setup lang="ts">
-// Explicit imports, not auto-import: the Nuxt module's addImportsDir()
-// covers editor DX and vue-tsc, but the native webpack build never goes
-// through Nuxt's auto-import codegen at all (see ARCHITECTURE.md — this
-// is the one still-open gap a real device run surfaced). Until that's
-// wired in, native pages need this explicit form.
-import { useDevice } from 'nuxt-native/runtime/composables/useDevice.js'
-import { useNativeRouter } from 'nuxt-native/runtime/composables/useNativeRouter.js'
-
+// No imports needed — useDevice() and useNativeRouter() are auto-imported
+// (see cli/lib/auto-import-loader.mjs in nuxt-native's own repo for how).
 const device = useDevice()
 const { navigate } = useNativeRouter()
 
@@ -331,8 +331,6 @@ export function detailsPage() {
 </template>
 
 <script setup lang="ts">
-import { useNativeRouter } from 'nuxt-native/runtime/composables/useNativeRouter.js'
-
 const props = defineProps<{ id?: string }>()
 const id = props.id ?? 'unknown'
 const { back } = useNativeRouter()

@@ -15,7 +15,7 @@ export default createConfigForNuxt({
   // [id].vue) — the multi-word rule exists to avoid clashing with native
   // HTML elements, which doesn't apply to files nuxt-native's router
   // resolves by path, never registers as a global component.
-  files: ['playground/app/pages/**/*.vue'],
+  files: ['playground/app/pages/**/*.vue', 'examples/*/app/pages/**/*.vue'],
   rules: {
     'vue/multi-word-component-names': 'off'
   }

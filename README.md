@@ -476,9 +476,19 @@ imported or declared locally, then injecting the right import. Regenerated
 automatically on every `init`/`dev`/`build`, so a composable you add to
 `app/composables/` is picked up on the very next run.
 
-One real limitation: only composables are covered, not your own custom
-`.vue` components — those still need a normal explicit import (auto-
-importing components is a different mechanism in real Nuxt, not this one).
+Two real limitations, worth knowing:
+
+- Only composables/utils are covered, not your own custom `.vue`
+  components — those still need a normal explicit import (auto-importing
+  components is a different mechanism in real Nuxt, not this one).
+- `vue-tsc`/your editor's TS server will still flag a name that's used
+  **only** inside `<template>` and never referenced in `<script>` — Vue's
+  compiler determines a template's available bindings from the script
+  block's own code, not from the ambient types that make `vue-tsc` aware
+  of auto-imports elsewhere. The actual build is unaffected either way;
+  if you see this, reference the name once in `<script>` instead (a
+  `computed()` is usually the natural fix, and is better practice than an
+  inline template call regardless — it's cached, not re-run every render).
 
 ## Plugins
 
