@@ -1,8 +1,6 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-
-const GRADLE_MARKER_START = '// nuxt-native: managed version block — see `nuxt-native version`'
-const GRADLE_MARKER_END = '// nuxt-native: end managed version block'
+import { ensureMarkedBlock } from './marked-block.mjs'
 
 /**
  * package.json's own `version` field (already standard, already what
@@ -61,32 +59,14 @@ export function bumpSemver(version, part) {
  */
 function syncAndroidVersion(projectRoot, version, versionCode) {
   const path = join(projectRoot, 'App_Resources', 'Android', 'app.gradle')
-  const block = `${GRADLE_MARKER_START}
+  ensureMarkedBlock(path, 'managed version block', `
 android {
     defaultConfig {
         versionCode ${versionCode}
         versionName "${version}"
     }
 }
-${GRADLE_MARKER_END}
-`
-
-  if (!existsSync(path)) {
-    mkdirSync(join(projectRoot, 'App_Resources', 'Android'), { recursive: true })
-    writeFileSync(path, block)
-    return
-  }
-
-  const content = readFileSync(path, 'utf8')
-  const startIdx = content.indexOf(GRADLE_MARKER_START)
-  const endIdx = content.indexOf(GRADLE_MARKER_END)
-  if (startIdx !== -1 && endIdx !== -1) {
-    const before = content.slice(0, startIdx)
-    const after = content.slice(endIdx + GRADLE_MARKER_END.length)
-    writeFileSync(path, before + block.trimEnd() + after)
-  } else {
-    writeFileSync(path, content.trimEnd() + '\n\n' + block)
-  }
+`)
 }
 
 /**

@@ -60,6 +60,12 @@ tradeoff React Native and Flutter made, applied to the Nuxt/Vue ecosystem.
 - **Pinia, as a first-class citizen** — install `pinia` and `nuxt-native
   init`/`create` wires `createPinia()` into the app bootstrap automatically.
   See [State management (Pinia)](#state-management-pinia) below.
+- **`useMcpClient()`** — apps can connect to [MCP](https://modelcontextprotocol.io)
+  servers and call their tools. See [MCP client](#mcp-client-usemcpclient)
+  below.
+- **`useWebSocket()`** — real native WebSocket support (OkHttp on Android,
+  `NSURLSessionWebSocketTask` on iOS), no npm plugin dependency. See
+  [Real-time networking](#real-time-networking-usewebsocket) below.
 - **The `nuxt-native` CLI** generates the on-device bootstrap from
   `app/pages` and hands off to NativeScript's own toolchain (`ns run`,
   `ns build`) for the actual native compile/deploy/LiveSync — that's
@@ -363,6 +369,52 @@ confirmed inside an actual compiled app running on a physical device
 against a network-reachable server (needs real network topology this
 session didn't have set up) — everything short of that on-device run is
 verified.
+
+## Real-time networking (`useWebSocket()`)
+
+```vue
+<script setup lang="ts">
+import { useWebSocket } from 'nuxt-native/runtime/composables/useWebSocket'
+
+const ws = useWebSocket('wss://your-server.example.com/socket', {
+  onOpen: () => console.log('connected'),
+  onMessage: (data) => console.log('got:', data),
+  onClose: (code, reason) => console.log('closed', code, reason)
+})
+ws.send('hello')
+</script>
+```
+
+Import this one **without** a `.js` suffix, unlike every other composable —
+see the composable's own doc comment for exactly why (it's a real,
+confirmed resolution-order interaction between this package's `exports`
+field and webpack's platform-extension list, not an arbitrary choice).
+
+NativeScript has no global `WebSocket` (confirmed on a real device: `typeof
+WebSocket` is `"undefined"`), and no maintained NativeScript WebSocket
+plugin exists on npm (checked directly). This talks to each platform's
+real native WebSocket capability directly instead: Android via OkHttp
+(added as a real Gradle dependency automatically by `nuxt-native init`,
+since `@nativescript/core`'s own HTTP module uses its own native widget,
+not OkHttp — confirmed by reading its Android implementation), iOS via
+`NSURLSessionWebSocketTask` (a first-party OS API since iOS 13, no extra
+dependency needed). The Java/Objective-C interop patterns used
+(`SomeClass.extend({...})` to subclass a native class from JS) are
+confirmed as NativeScript's real, standard convention by reading three
+independent usages in `@nativescript/core`'s own source before writing
+this, not invented.
+
+**Verification status, honestly**: the Android implementation compiles
+cleanly through a real webpack build (including catching and fixing the
+`.js`-suffix resolution issue above) and typechecks correctly against
+`@nativescript/types`. A real Gradle build and an on-device confirmation
+were both still pending when this was built — the development machine hit
+a genuine, severe memory constraint (5.74 GB total RAM, shared with other
+real work) partway through, and no device was connected at that point
+either. The iOS implementation is additionally unverified in the same way
+every other iOS code path in this framework is (no Xcode/macOS access at
+all) — a real, best-effort implementation against Apple's documented API,
+not a stub, but not compiled or run.
 
 ## Gradle memory tuning
 

@@ -7,6 +7,7 @@ import { generateEntry } from '../lib/generate-entry.mjs'
 import { applySplashBranding } from '../lib/splash.mjs'
 import { ensureTailwindSetup } from '../lib/tailwind-setup.mjs'
 import { ensureGradleMemorySettings } from '../lib/gradle-tuning.mjs'
+import { ensureWebSocketDependency } from '../lib/websocket-setup.mjs'
 import { run } from '../lib/run.mjs'
 
 export async function init({ platforms } = {}) {
@@ -58,6 +59,18 @@ export async function init({ platforms } = {}) {
   // since customized itself.
   ensureGradleMemorySettings(join(process.cwd(), 'platforms'), targets)
   console.log('[nuxt-native] Tuned Gradle memory settings for this machine')
+
+  // Unconditional, like the two settings above: OkHttp is a small (~750
+  // KB), extremely common Android dependency (most real apps already pull
+  // it in transitively via something else), and useWebSocket() needs it
+  // present to interop with regardless of whether a given app actually
+  // calls it — matching the "batteries included" UI-kit-style default
+  // this framework already takes elsewhere, rather than gating it behind
+  // detecting real usage.
+  if (targets.includes('android')) {
+    ensureWebSocketDependency(process.cwd())
+    console.log('[nuxt-native] Added OkHttp (for useWebSocket()) to App_Resources/Android/app.gradle')
+  }
 
   console.log('[nuxt-native] Init complete. Next: nuxt-native dev <ios|android>')
 }
