@@ -4,7 +4,7 @@ import { ENTRY_FILE } from './generate-entry.mjs'
 // straight from GitHub. Once it's published, this is the one line to change.
 export const NUXT_NATIVE_DEPENDENCY_SPEC = 'github:vastx-tech/nuxt-native'
 
-export function packageJson(appName) {
+export function packageJson(appName, dependencySpec = NUXT_NATIVE_DEPENDENCY_SPEC) {
   return `${JSON.stringify(
     {
       name: appName,
@@ -33,7 +33,7 @@ export function packageJson(appName) {
         'native:build:android': 'nuxt-native build android --release'
       },
       dependencies: {
-        'nuxt-native': NUXT_NATIVE_DEPENDENCY_SPEC,
+        'nuxt-native': dependencySpec,
         'nativescript-vue': '^3.1.2',
         '@nativescript/core': '^9.1.2',
         nuxt: '^4.0.0'

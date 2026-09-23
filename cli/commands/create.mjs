@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
   appVue,
@@ -24,10 +24,27 @@ import { init } from './init.mjs'
  * flag. A `create` command that the user explicitly invokes is the same
  * pattern `create-react-app`/`create-expo-app`/`create-vite` use for the
  * same reason.
+ *
+ * `link`, when given, points at a local nuxt-native checkout on disk
+ * instead of depending on `github:vastx-tech/nuxt-native` — the generated
+ * project's `nuxt-native` dependency becomes a real `file:` spec (npm
+ * symlinks it, no network fetch). This exists because `npx
+ * vastx-tech/nuxt-native create ...`'s own fresh install has a real,
+ * confirmed failure mode on a memory-constrained machine: it has to run
+ * nuxt-native's own `prepare` script (an esbuild-based build) as part of
+ * installing it, which — reproduced directly, more than once — can OOM-crash
+ * a small machine before `create` ever gets to run at all, leaving no
+ * project behind and only an obscure npm cleanup error as a clue. `link`
+ * sidesteps the network fetch entirely, and additionally works around that
+ * same `prepare`-script cost for the *local* install too (see
+ * `withPrepareScriptDisabled` below) — genuinely necessary, not just a
+ * nicety: npm runs a `file:` dependency's `prepare` script regardless of
+ * `--ignore-scripts` (confirmed directly), so without this, even a local
+ * link pays the same OOM-risking cost on every single `create`.
  */
-export async function create(name, { appId, platforms } = {}) {
+export async function create(name, { appId, platforms, link } = {}) {
   if (!name) {
-    throw new Error('[nuxt-native] Usage: nuxt-native create <project-name> [--app-id com.example.app] [--platforms ios,android]')
+    throw new Error('[nuxt-native] Usage: nuxt-native create <project-name> [--app-id com.example.app] [--platforms ios,android] [--link /path/to/nuxt-native]')
   }
 
   const targetDir = resolve(process.cwd(), name)
@@ -37,12 +54,23 @@ export async function create(name, { appId, platforms } = {}) {
 
   const resolvedAppId = appId ?? `com.example.${name.replace(/[^a-z0-9]/gi, '').toLowerCase() || 'app'}`
   const resolvedPlatforms = platforms?.length ? platforms : ['ios', 'android']
+  const linkPath = link ? resolve(process.cwd(), link).replace(/\\/g, '/') : undefined
+  const dependencySpec = linkPath ? `file:${linkPath}` : undefined
+
+  if (linkPath && !existsSync(resolve(linkPath, 'package.json'))) {
+    throw new Error(`[nuxt-native] --link ${link} doesn't look like a nuxt-native checkout (no package.json at ${linkPath}).`)
+  }
 
   console.log(`[nuxt-native] Scaffolding ${name}/ ...`)
-  scaffold(targetDir, { appId: resolvedAppId, appName: name })
+  scaffold(targetDir, { appId: resolvedAppId, appName: name, dependencySpec })
 
   console.log('[nuxt-native] Installing dependencies (this pulls Nuxt, nuxt-native, and NativeScript) ...')
-  await run('npm', ['install'], { cwd: targetDir })
+  if (linkPath) {
+    console.log(`[nuxt-native] Linking nuxt-native to local checkout: ${linkPath}`)
+    await withPrepareScriptDisabled(linkPath, () => run('npm', ['install'], { cwd: targetDir }))
+  } else {
+    await run('npm', ['install'], { cwd: targetDir })
+  }
 
   // init() operates on process.cwd() (it reads nuxt.config.ts and shells to
   // `ns` relative to it) — switch into the new project the same way a user
@@ -57,10 +85,10 @@ export async function create(name, { appId, platforms } = {}) {
 `)
 }
 
-function scaffold(targetDir, { appId, appName }) {
+function scaffold(targetDir, { appId, appName, dependencySpec }) {
   mkdirSync(resolve(targetDir, 'app/pages/details'), { recursive: true })
 
-  writeFileSync(resolve(targetDir, 'package.json'), packageJson(appName))
+  writeFileSync(resolve(targetDir, 'package.json'), packageJson(appName, dependencySpec))
   writeFileSync(resolve(targetDir, 'nuxt.config.ts'), nuxtConfig(appId, appName))
   writeFileSync(resolve(targetDir, 'tsconfig.json'), tsconfig())
   writeFileSync(resolve(targetDir, '.gitignore'), gitignore())
@@ -71,4 +99,33 @@ function scaffold(targetDir, { appId, appName }) {
   // retrofit-an-existing-project path, instead of duplicating this here.
   writeFileSync(resolve(targetDir, 'app/pages/index.vue'), indexPage())
   writeFileSync(resolve(targetDir, 'app/pages/details/[id].vue'), detailsPage())
+}
+
+/**
+ * Temporarily replaces the linked checkout's own `package.json`
+ * `scripts.prepare` with a no-op for the duration of `fn`, then restores
+ * the exact original content — regardless of whether `fn` succeeds or
+ * throws. Safe to skip entirely if the checkout's `dist/` is already
+ * built (the common case for a real, working local checkout): this never
+ * touches `dist/` itself, only avoids re-running the build that produced
+ * it.
+ */
+async function withPrepareScriptDisabled(checkoutPath, fn) {
+  const pkgPath = resolve(checkoutPath, 'package.json')
+  const original = readFileSync(pkgPath, 'utf8')
+  const pkg = JSON.parse(original)
+
+  if (!pkg.scripts?.prepare) {
+    await fn()
+    return
+  }
+
+  pkg.scripts.prepare = 'echo nuxt-native: skipping prepare (temporarily disabled by nuxt-native create --link)'
+  writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n')
+
+  try {
+    await fn()
+  } finally {
+    writeFileSync(pkgPath, original)
+  }
 }

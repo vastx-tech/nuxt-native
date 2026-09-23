@@ -18,7 +18,8 @@ try {
       const [name, ...rest] = args
       await create(name, {
         appId: flagValue(rest, '--app-id'),
-        platforms: flagValue(rest, '--platforms')?.split(',')
+        platforms: flagValue(rest, '--platforms')?.split(','),
+        link: flagValue(rest, '--link')
       })
       break
     }
@@ -87,8 +88,15 @@ function printHelp() {
   console.log(`nuxt-native — build real native iOS/Android apps with Nuxt
 
 Usage:
-  nuxt-native create <name> [--app-id com.example.app] [--platforms ios,android]
-                                      Scaffold a new project, install deps, and wire up native platforms
+  nuxt-native create <name> [--app-id com.example.app] [--platforms ios,android] [--link /path/to/nuxt-native]
+                                      Scaffold a new project, install deps, and wire up native platforms.
+                                      --link points at a local nuxt-native checkout instead of fetching from
+                                      GitHub (npm symlinks it — no network fetch, and skips the checkout's
+                                      own prepare-script cost too). Recommended over a bare \`npx
+                                      vastx-tech/nuxt-native create\` while developing nuxt-native itself, or
+                                      on a memory-constrained machine — a fresh GitHub install has to run
+                                      nuxt-native's own build as part of installing it, which can OOM-crash
+                                      before \`create\` ever runs.
   nuxt-native init [ios] [android]    Scaffold nativescript.config.ts + native platforms (existing project)
   nuxt-native dev <ios|android> [ns run flags...]     Build, deploy, and LiveSync to a device/simulator
   nuxt-native build <ios|android> [ns build flags...] Produce a native build artifact
