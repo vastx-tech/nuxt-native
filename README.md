@@ -1,23 +1,29 @@
 # Nuxt Native
 
-Build real native iOS and Android apps with Nuxt and Vue — no WebView, no DOM.
-Vue components render as actual native views (`UIView` / `android.view.View`),
-the same way React Native components render as real native views instead of
-HTML. Nuxt Native brings Nuxt's developer experience — file-based pages,
-auto-imported composables/components, a single module system — to that model,
-built on [NativeScript](https://nativescript.org)'s native runtime rather
-than reinventing one from scratch.
+Build real native Android apps with Nuxt and Vue — no WebView, no DOM (iOS
+support exists and is written against Apple's documented APIs throughout,
+but is still experimental — see the status note below). Vue components
+render as actual native views (`UIView` / `android.view.View`), the same
+way React Native components render as real native views instead of HTML.
+Nuxt Native brings Nuxt's developer experience — file-based pages,
+auto-imported composables/components/style helpers, a single module
+system — to that model, built on
+[NativeScript](https://nativescript.org)'s native runtime rather than
+reinventing one from scratch.
 
-> **Status: early / pre-alpha, but confirmed running on a real device.** The
-> `create` command has taken a project from an empty folder to a rendering
-> Android app on physical hardware — the module, composables, UI kit, CLI
-> (including release signing, a doctor command, and a bundle analyzer),
-> and the native build pipeline it hands off to all work together end to
-> end. Auto-imports don't yet reach the on-device bundle (native pages
-> need explicit imports for now), and iOS is entirely unverified — every
-> real-device confirmation so far is Android. See
-> [ARCHITECTURE.md](./ARCHITECTURE.md) for exactly what's confirmed vs.
-> still the frontier — that's where contributors are most needed.
+> **Status: early / pre-alpha. Android is verified on real hardware; iOS
+> is experimental.** The `create` command has taken a project from an
+> empty folder to a rendering Android app on physical hardware, repeatedly
+> — the module, composables, the typed style-object system, the UI kit,
+> auto-imports (composables/utils reach the real on-device bundle, not
+> just the editor), the CLI (release signing, a doctor command, a bundle
+> analyzer), and the native build pipeline it hands off to all work
+> together end to end, confirmed on-device. iOS code paths are written
+> against Apple's real, documented APIs and reviewed the same way, but
+> have never been compiled or run — no Xcode/macOS access anywhere in
+> this project's development so far. See [ARCHITECTURE.md](./ARCHITECTURE.md)
+> for exactly what's confirmed vs. still the frontier — iOS verification
+> is where contributors are most needed.
 
 ## Why not Capacitor / a WebView?
 
