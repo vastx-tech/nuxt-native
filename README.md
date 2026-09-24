@@ -222,6 +222,55 @@ the same CSS parser `@nativescript/webpack` uses) — see
 ships Android-first with iOS's `<FlexboxLayout>` performance deliberately
 left to a real on-device benchmark before it's the default there too.
 
+### Typed style helpers
+
+An alternative to Tailwind classes — Flutter's actual mechanism (widgets
+take typed style objects, not a CSS engine), which NativeScript already
+supports directly: every `:style` binding is already a plain JS object, not
+a CSS string. `nuxt-native/runtime/style.js` gives that a small, typed API
+built on the same tokens the UI kit uses — no CSS generation or parsing, so
+nothing here can hit the "utility isn't supported, so it silently no-ops"
+class of bug Tailwind needs a `corePlugins` allowlist to guard against.
+Every property is one confirmed real on NativeScript's View/Style classes
+(grepped directly from `@nativescript/core`'s own `cssName:` registrations,
+not assumed from documentation).
+
+All of these are **auto-imported** — no import statement needed, same as
+any composable. Combine them by binding `:style` to an **array** (Vue's own
+built-in style-array merging, confirmed supported by nativescript-vue's
+renderer):
+
+```vue
+<template>
+  <NFlex :style="[padding('lg'), bg('surface'), flex({ direction: 'column', gap: 'md' })]">
+    <Label text="Total" :style="textStyle({ size: 'xl', weight: 'bold', color: 'primary' })" />
+    <Label text="Card" :style="[border({ radius: 'md' }), box({ elevated: true })]" />
+  </NFlex>
+</template>
+```
+
+**Lengths** (`padding`, `margin`, `size`, `border`'s width/radius, `textStyle`'s
+size/lineHeight) accept a spacing token (`'md'`), a raw number (device-
+independent pixels), or a `'16px'`/`'1rem'` string for readability —
+`1rem` is a deliberate convention borrowed from CSS (`= 16dip`), not a real
+NativeScript unit; it has no root-font-size concept of its own.
+
+| Function | Covers |
+|---|---|
+| `padding(length \| sides)` / `margin(length \| sides)` | Box model spacing, per-side via `{ top, right, bottom, left, horizontal, vertical, all }` |
+| `size({ width, height, minWidth, minHeight, maxWidth, maxHeight })` | Dimensions — `'100%'`/`'auto'` pass through literally |
+| `bg(color)` / `bg({ color, image, repeat, position, size })` | Background color, or the full shorthand (`image` supports real `linear-gradient(...)`) |
+| `box({ radius, background, elevated, borderColor, borderWidth, opacity, clipPath })` | The common-case container look — single radius/border, optional shadow. NativeScript has no `overflow` property at all; `clipPath` (a real CSS `clip-path` shape string) is the only way to clip content |
+| `border({ width, color, radius, cornerShape })` | Per-side width/color, per-corner radius, `'round'`/`'squircle'` corners — reach for this over `box()` when sides need to differ |
+| `textStyle({ size, weight, color, align, family, style, decoration, transform, letterSpacing, lineHeight, whiteSpace, overflow, maxLines, shadow })` | Full text styling |
+| `flex({ direction, wrap, justify, align, alignContent, gap, rowGap, columnGap, grow, shrink, alignSelf, order })` | Flex container/item properties — **only takes effect on a real `<NFlex>`/`<FlexboxLayout>`**, same as flexbox only does anything on a flex container on web. `justify` genuinely doesn't support `'space-evenly'` — confirmed directly against NativeScript's flexbox implementation, not a Tailwind-only limitation |
+| `transform({ rotate, rotateX, rotateY, scaleX, scaleY, translateX, translateY, perspective })` | Real, literal-number transforms — works where Tailwind's `rotate-*`/`scale-*` utilities can't (they compose from CSS custom properties NativeScript's parser doesn't resolve) |
+| `align({ horizontal, vertical })` | A view's own position *within its parent* (`horizontalAlignment`/`verticalAlignment`) — a different concept from `flex`'s `align-items`, which positions children of a flex container |
+| `visible(value)` / `zIndex(value)` | `'visible' \| 'hidden' \| 'collapse'`; stacking order |
+| `elevation(value, dynamicOffset?)` | Android-only Material elevation shadow — use `box({ elevated: true })` instead for a cross-platform shadow |
+| `direction(value)` | iOS-only `'ltr' \| 'rtl'` |
+| `opacity(color, amount)` / `shade(color, amount)` / `tint(color, amount)` | Flutter-style color manipulation — `Color.withOpacity()`/`Color.shade*`, real hex/rgb math, `amount` is 0–1 |
+
 ## HTML tag names
 
 Common HTML tags compile straight to real native views — no Vue component
@@ -519,7 +568,7 @@ don't need one.
 ## CLI reference
 
 ```bash
-nuxt-native create <name> [--app-id com.example.app] [--platforms ios,android]
+nuxt-native create <name> [--app-id com.example.app] [--platforms ios,android] [--link /path/to/nuxt-native]
 nuxt-native init [ios] [android]     # add to an existing project
 nuxt-native dev <ios|android> [ns run flags...]
 nuxt-native build <ios|android> [ns build flags...]
@@ -542,6 +591,18 @@ variables it prints (never written to disk):
 npx nuxt-native keystore create --alias my-app
 # then, once NUXT_NATIVE_KEYSTORE_* is set in your shell/CI secrets:
 npx nuxt-native build android --release
+```
+
+`--link` points the generated project's `nuxt-native` dependency at a local
+checkout (a real `file:` spec — npm symlinks it, no network fetch) instead
+of `github:vastx-tech/nuxt-native`, and skips that checkout's own `prepare`
+build for the install too (npm runs a `file:` dependency's `prepare` script
+regardless of `--ignore-scripts` — confirmed directly). Meant for developing
+nuxt-native itself, or any machine where a fresh install's own build step
+is a real memory risk:
+
+```bash
+nuxt-native create myapp --link ../nuxt-native
 ```
 
 ## App release versioning
