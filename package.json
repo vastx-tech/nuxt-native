@@ -20,7 +20,12 @@
   "files": [
     "dist",
     "bin",
-    "cli"
+    "cli",
+    "!cli/tests",
+    "STYLING.md",
+    "mcp-server/bin",
+    "mcp-server/src",
+    "mcp-server/README.md"
   ],
   "scripts": {
     "prepack": "nuxt-module-build build",
@@ -33,11 +38,17 @@
     "native:dev:android": "node ./bin/nuxt-native.mjs dev android",
     "lint": "eslint .",
     "typecheck": "vue-tsc --noEmit",
-    "test": "vitest run"
+    "test": "node --test cli/tests/styling.test.mjs mcp-server/packaged-cli.test.mjs",
+    "test:mcp": "node --test mcp-server/packaged-cli.test.mjs",
+    "test:styling": "node --test cli/tests/styling.test.mjs"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@nativescript/tailwind": "4.0.10",
     "@nuxt/kit": "^4.0.0",
-    "defu": "^6.1.4"
+    "defu": "^6.1.4",
+    "postcss-value-parser": "4.2.0",
+    "zod": "^3.25.0"
   },
   "peerDependencies": {
     "@nativescript/core": "^9.0.0",
@@ -58,6 +69,8 @@
     "nativescript": "^9.1.1",
     "nativescript-vue": "^3.1.2",
     "nuxt": "^4.0.0",
+    "postcss": "^8.5.28",
+    "tailwindcss": "^3.4.19",
     "typescript": "^5.6.0",
     "vitest": "^2.0.0",
     "vue-tsc": "^2.0.0"

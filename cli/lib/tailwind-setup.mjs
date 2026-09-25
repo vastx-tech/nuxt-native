@@ -1,45 +1,64 @@
 import { createRequire } from 'node:module'
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { appCss, postcssConfig, tailwindConfig } from './scaffold-templates.mjs'
+import { stylingGuide, stylingAgentInstructions } from './styling-guide.mjs'
 import { run } from './run.mjs'
 
 /**
- * Writes tailwind.config.cjs/postcss.config.cjs/app/app.css if a project
- * doesn't have them yet — same "ensure" pattern as
- * ensureNativeScriptConfig()/ensureWebpackConfig(), and for the same
- * reason: `create` writing these once at scaffold time only covers
- * brand-new projects. A project created before this feature existed (or
- * one that only ran `init` against an existing Nuxt app, which never goes
- * through `create`'s scaffold step at all) would otherwise have no way to
- * pick it up short of hand-authoring all three files — `nuxt-native init`
- * is supposed to be the safe, idempotent command that brings a project up
- * to date, so this belongs here, not just in `create`.
- *
- * Each file is independent and only written if missing, so re-running
- * this never clobbers a project's own Tailwind customizations.
- *
- * `create` also declares tailwindcss/postcss in the fresh package.json it
- * generates and runs `npm install` once, so they're always present there.
- * `init` alone has neither — it's meant to work against a project whose
- * package.json it never touches (see the README's "adding to an existing
- * project" flow) — so postcss.config.cjs's `require('tailwindcss')` would
- * otherwise throw `Cannot find module 'tailwindcss'` the moment `ns run`/
- * `ns build` first processes app.css. Reproduced by a real user retrofitting
- * an existing project via `init` alone. Fixed the same way `create` avoids
- * it: install both here too, but only if they're not already resolvable
- * from the project (so this is a no-op, not a redundant install, for any
- * project that already has them — including everything `create` scaffolds).
+ * Sets up the explicit Tailwind v3 + NativeScript PostCSS pipeline. Only
+ * untouched legacy generated configs are migrated (with a backup); custom
+ * configs, source styles, and existing agent instructions are preserved.
+ * Called by init/dev/build as well as fresh project creation.
  */
 export async function ensureTailwindSetup(projectRoot) {
-  writeIfMissing(join(projectRoot, 'tailwind.config.cjs'), tailwindConfig())
-  writeIfMissing(join(projectRoot, 'postcss.config.cjs'), postcssConfig())
-  writeIfMissing(join(projectRoot, 'app/app.css'), appCss())
-
-  if (!isResolvable('tailwindcss', projectRoot)) {
-    console.log('[nuxt-native] Installing tailwindcss/postcss (not found in this project) ...')
-    await run('npm', ['install', '--save-dev', 'tailwindcss@^3.4.19', 'postcss@^8.5.28'], { cwd: projectRoot })
+  const requireFromProject = createRequire(join(projectRoot, 'package.json'))
+  if (isResolvable('tailwindcss/package.json', projectRoot)) {
+    const { version } = JSON.parse(readFileSync(requireFromProject.resolve('tailwindcss/package.json'), 'utf8'))
+    if (!version.startsWith('3.')) {
+      throw new Error('[nuxt-native] This integration requires Tailwind v3. Run npm install -D tailwindcss@^3.4.19. Tailwind v4 needs a different pipeline; your config has not been changed.')
+    }
   }
+
+  const missing = ['tailwindcss@^3.4.19', 'postcss@^8.5.28']
+    .filter(spec => !isResolvable(spec.split('@')[0], projectRoot))
+  if (missing.length) {
+    console.log(`[nuxt-native] Installing styling dependencies: ${missing.join(', ')}`)
+    await run('npm', ['install', '--save-dev', ...missing], { cwd: projectRoot })
+  }
+
+  if (!findConfig(projectRoot, 'tailwind')) writeIfMissing(join(projectRoot, 'tailwind.config.cjs'), tailwindConfig())
+  writeIfMissing(join(projectRoot, 'app/app.css'), appCss())
+  writeIfMissing(join(projectRoot, 'STYLING.md'), stylingGuide())
+  writeIfMissing(join(projectRoot, 'AGENTS.md'), stylingAgentInstructions())
+
+  const configPath = findConfig(projectRoot, 'postcss') ?? join(projectRoot, 'postcss.config.cjs')
+  if (!existsSync(configPath)) {
+    writeFileSync(configPath, postcssConfig())
+  } else {
+    const source = readFileSync(configPath, 'utf8')
+    // Only migrate the original generated config. Preserve custom pipelines.
+    const withoutComments = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').trim()
+    if (/^module\.exports\s*=\s*\{\s*plugins:\s*\[\s*require\(['"]tailwindcss['"]\)\s*\]\s*(?:,\s*)?\}\s*;?$/.test(withoutComments)) {
+      const backup = `${configPath}.before-native-tailwind`
+      if (!existsSync(backup)) copyFileSync(configPath, backup)
+      writeFileSync(configPath, postcssConfig())
+      console.log(`[nuxt-native] Upgraded generated PostCSS config (backup: ${backup})`)
+    } else if (!source.includes('nuxt-native/cli/lib/native-tailwind.cjs')) {
+      console.warn(`[nuxt-native] Custom PostCSS config preserved: ${configPath}. Add require('nuxt-native/cli/lib/native-tailwind.cjs')() after Tailwind for native units and gaps. See STYLING.md.`)
+    }
+  }
+}
+
+function findConfig(root, name) {
+  const extensions = ['cjs', 'js', 'mjs', 'ts', 'cts', 'mts']
+  const candidates = extensions.map(ext => `${name}.config.${ext}`)
+  if (name === 'postcss') {
+    candidates.push('.postcssrc', ...[...extensions, 'json', 'yaml', 'yml'].map(ext => `.postcssrc.${ext}`))
+    const packagePath = join(root, 'package.json')
+    if (existsSync(packagePath) && JSON.parse(readFileSync(packagePath, 'utf8')).postcss) return packagePath
+  }
+  return candidates.map(path => join(root, path)).find(path => existsSync(path))
 }
 
 function isResolvable(specifier, projectRoot) {

@@ -14,6 +14,11 @@ const [, , command, ...args] = process.argv
 
 try {
   switch (command) {
+    case 'mcp':
+      // Load the SDK only when serving MCP; stdout belongs to the protocol.
+      await import('../mcp-server/bin/server.mjs')
+      break
+
     case 'create': {
       const [name, ...rest] = args
       await create(name, {
@@ -101,6 +106,7 @@ Usage:
   nuxt-native dev <ios|android> [ns run flags...]     Build, deploy, and LiveSync to a device/simulator
   nuxt-native build <ios|android> [ns build flags...] Produce a native build artifact
   nuxt-native doctor                  Check the project for every known misconfiguration, then run \`ns info\`
+  nuxt-native mcp                     Start the MCP server over stdio for an AI coding agent
   nuxt-native keystore create --alias <name> [--output ./release.keystore] [--validity 10000]
                                       Generate an Android release-signing keystore
   nuxt-native analyze <ios|android>   Build with a bundle size report (report/report.html)

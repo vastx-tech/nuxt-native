@@ -13,29 +13,47 @@ does" to drift apart.
 
 ## Setup
 
+The server ships with `nuxt-native`, including its SDK dependencies. From any
+project with the framework installed, the entry point is:
+
 ```bash
-cd mcp-server
-npm install
+npx nuxt-native mcp
 ```
 
-Not published — configure your MCP client to run it straight from this
-checkout. For Claude Code, add to `.mcp.json` (project-level) or your
-user-level MCP config:
+Configure your agent to launch this command from your app's project directory.
+The agent manages the server process; no separate server terminal, repository
+clone, or `mcp-server/` directory in the app is needed. A manual launch waits
+for MCP messages on stdin; it does not start an HTTP endpoint.
+
+For Claude Code, add to `.mcp.json` in the app project:
 
 ```json
 {
   "mcpServers": {
     "nuxt-native": {
-      "command": "node",
-      "args": ["/absolute/path/to/nuxt-native/mcp-server/bin/server.mjs"]
+      "command": "npx",
+      "args": ["nuxt-native", "mcp"]
     }
   }
 }
 ```
 
-Every tool takes a `projectPath` argument (the nuxt-native project to act
-on) — the server itself isn't tied to one project, so one running instance
-can drive any number of them across a session.
+If a Windows host cannot launch npx directly, use `"command": "cmd"` and
+`"args": ["/c", "npx", "nuxt-native", "mcp"]`. If your host runs outside
+the app directory, set its working directory or use `node` with the absolute
+path to the app's `node_modules/nuxt-native/bin/nuxt-native.mjs` and `mcp`.
+Configuration formats vary between agents.
+
+Project tools take an absolute `projectPath` argument (the app to act on);
+`read_logs` operates on the selected device without a project path. Run tools
+sequentially because the CLI wrappers share process working-directory and
+output-capture state. Android builds require the SDK/JDK; install and logs
+require ADB. This stdio development server is separate from the mobile app's
+`useMcpClient()` HTTP client.
+
+For development of this server itself, install dependencies at the repository
+root and run `node bin/nuxt-native.mjs mcp`. The old
+`node mcp-server/bin/server.mjs` entry point also remains available.
 
 ## Tools
 
@@ -71,6 +89,10 @@ confirmed zero output reached the actual process stdout in between, with
 the full report correctly captured instead.
 
 ## Verifying it works
+
+From the framework repository root, `npm run test:mcp` checks npm's packaging
+allowlist and launches the packaged CLI from a temporary app. It verifies tool
+discovery and a read-only version call without requiring Android tooling.
 
 ```bash
 node test-client.mjs /absolute/path/to/a/nuxt-native/project

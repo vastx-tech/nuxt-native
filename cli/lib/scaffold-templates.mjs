@@ -68,6 +68,52 @@ export function packageJson(appName, dependencySpec = NUXT_NATIVE_DEPENDENCY_SPE
   )}\n`
 }
 
+export function projectReadme() {
+  return `# Nuxt Native app
+
+Run on Android with \`npx nuxt-native dev android\` (or use \`ios\` on macOS).
+
+Read [STYLING.md](./STYLING.md) before changing layout or spacing. The framework
+uses Tailwind v3 with its bundled @nativescript/tailwind adapter.
+
+## AI coding agents (MCP)
+
+The framework includes an MCP server. No separate clone or server folder is needed.
+Configure your agent to launch \`npx nuxt-native mcp\` from this project directory.
+The agent starts and stops the server; you do not need to run it in another terminal.
+It uses stdio, so a manual launch waits for MCP messages rather than opening a web page.
+
+For clients using the \`mcpServers\` format, such as Claude Code's \`.mcp.json\`:
+
+\`\`\`json
+{
+  "mcpServers": {
+    "nuxt-native": {
+      "command": "npx",
+      "args": ["nuxt-native", "mcp"]
+    }
+  }
+}
+\`\`\`
+
+If your Windows client cannot launch npx directly, use command \`cmd\` and
+args \`["/c", "npx", "nuxt-native", "mcp"]\`.
+For clients launched elsewhere, set their working directory to this project or
+use command \`node\` with the absolute path to
+\`node_modules/nuxt-native/bin/nuxt-native.mjs\` followed by \`mcp\` as arguments.
+
+Try: "Use nuxt-native to run doctor and lint for this project's absolute path,
+then build Android, install it on my connected device, and check the logs.
+Run the steps sequentially."
+
+Tools include doctor, lint, build, list_devices, install_and_launch, read_logs,
+analyze, version, and clean. Pass the app's absolute path as projectPath when
+the tool requests it. Native builds still require the platform SDK and JDK;
+Android installation and logs require ADB and a connected device or emulator.
+This development server is separate from the app's useMcpClient() HTTP client.
+`
+}
+
 export function nuxtConfig(appId, appName) {
   return `export default defineNuxtConfig({
   modules: ['nuxt-native'],
@@ -203,9 +249,9 @@ hooks
 //    against NativeScript's css-tree-based engine.
 //  - preflight: Tailwind's HTML/box-sizing reset — meaningless for views
 //    that were never HTML elements to begin with.
-// Everything listed IS a real, confirmed-working CSS property on
-// NativeScript's View/Style classes, so these utilities behave the same
-// as they would in a browser.
+// This controls generation, not runtime compatibility. The bundled
+// @nativescript/tailwind adapter converts units and filters output; our
+// wrapper preserves NativeScript 9 properties missing from its filter.
 const TAILWIND_CORE_PLUGINS = [
   'margin',
   'padding',
@@ -259,7 +305,8 @@ export function tailwindConfig() {
 // apply, and why. Safe to edit, but removing entries here doesn't make
 // NativeScript support them — it only controls what Tailwind generates.
 module.exports = {
-  content: ['./app/**/*.vue', './.nuxt-native/**/*.{js,vue}'],
+  content: ['./app/**/*.{vue,js,ts}', './.nuxt-native/**/*.{js,vue}'],
+  darkMode: ['class', '.ns-dark'],
   corePlugins: ${JSON.stringify(TAILWIND_CORE_PLUGINS, null, 2).replace(/\n/g, '\n  ')},
   theme: {
     extend: {}
@@ -269,12 +316,14 @@ module.exports = {
 }
 
 export function postcssConfig() {
-  return `// @nativescript/webpack already runs every .css file through
-// postcss-loader (confirmed against its base config) and merges in
-// whatever plugins this file exports — so this is the only wiring
-// Tailwind needs on the build side.
+  return `// Tailwind v3 generates utilities; the bundled @nativescript/tailwind
+// adapter converts them to native CSS and preserves NativeScript 9 gaps.
+// Keep this adapter last. Do not also enable upstream's v4 autoload pipeline.
 module.exports = {
-  plugins: [require('tailwindcss')]
+  plugins: [
+    require('tailwindcss'),
+    require('nuxt-native/cli/lib/native-tailwind.cjs')()
+  ]
 }
 `
 }
@@ -304,8 +353,8 @@ export function indexPage() {
       <Label text="Welcome to Nuxt Native" class="text-2xl font-bold text-center" />
       <Label text="Tap the buttons to change the count." class="text-base text-center" />
       <Label :text="String(count)" class="text-5xl font-bold text-center" />
-      <Button text="Increment +" class="bg-indigo-600 text-white rounded-lg p-3" @tap="count++" />
-      <Button text="Decrement -" class="bg-slate-600 text-white rounded-lg p-3" @tap="count--" />
+      <NButton text="Increment +" size="lg" @tap="count++" />
+      <NButton text="Decrement -" variant="secondary" size="lg" @tap="count--" />
     </NFlex>
   </NPage>
 </template>

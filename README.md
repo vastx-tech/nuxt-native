@@ -186,6 +186,20 @@ real `$showModal` — your content component can dismiss itself by importing
 
 ### Tailwind
 
+Nuxt Native uses **Tailwind v3 + the bundled `@nativescript/tailwind` adapter**.
+The generated PostCSS config runs the framework's compatibility wrapper after
+Tailwind. It converts `1rem` to `16` native DIPs and preserves NativeScript 9
+gaps, max dimensions, and text properties omitted by the upstream filter.
+The upstream adapter is pinned and installed as a framework dependency; do not
+add it directly to the app and activate its separate Tailwind v4 autoloader.
+
+Read [STYLING.md](./STYLING.md) for the spacing contract. New projects receive
+that guide plus `AGENTS.md` so coding agents use the same conventions.
+`init`, `dev`, and `build` migrate the old untouched generated PostCSS config
+with a backup. Custom configurations are preserved with migration instructions.
+The corrected units can enlarge spacing in existing screens; review any values
+that were inflated to compensate for the old rem bug.
+
 NativeScript's CSS engine only understands a fixed set of properties —
 spacing, color, typography, borders/radius, opacity, shadow, visibility,
 z-index, and flex properties (but only on a real `<FlexboxLayout>`). It has
@@ -202,12 +216,12 @@ since v4 dropped the JS-config `corePlugins` API this relies on.
 <template>
   <NPage title="Sign in">
     <NFlex class="flex-col p-5 gap-4">
-      <NText text="Welcome back" variant="h1" class="text-center" />
+      <NText text="Welcome back" variant="h1" align="center" />
       <NFlex class="flex-row items-center justify-between gap-2 bg-slate-100 rounded-lg p-3">
         <NText text="Remember me" />
         <NSwitch v-model="remember" />
       </NFlex>
-      <NButton text="Sign in" class="bg-indigo-600 rounded-lg p-3" @tap="signIn" />
+      <NButton text="Sign in" size="lg" @tap="signIn" />
     </NFlex>
   </NPage>
 </template>
@@ -654,7 +668,13 @@ by hand too.
 
 ## MCP server (agent-driven dev workflow)
 
-`mcp-server/` (see its own README) exposes `nuxt-native`'s dev workflow —
+Run `npx nuxt-native mcp` from an app project to start the bundled stdio
+MCP server. Configure your AI agent to launch that command; no separate
+repository clone or server folder is needed. New projects include setup
+instructions in their README. See [MCP setup](./mcp-server/README.md) for
+agent configuration, including Windows launch options.
+
+The server exposes `nuxt-native`'s dev workflow —
 `doctor`, `build`, `lint`, `clean`, `analyze`, device listing, install +
 launch, log reading — as [MCP](https://modelcontextprotocol.io) tools, so
 any MCP-speaking AI agent (Claude Code, Claude Desktop, anything else that
@@ -672,7 +692,7 @@ src/                the Nuxt module (composables, components, route generation)
 cli/, bin/          the nuxt-native CLI (native bootstrap + ns run/build orchestration)
 playground/         example Nuxt app consuming the module
 vscode-extension/   the VS Code extension (separate package.json/build)
-mcp-server/         MCP server exposing the dev workflow to AI agents (separate package.json)
+mcp-server/         bundled MCP server exposing the dev workflow to AI agents
 ```
 
 ## Contributing

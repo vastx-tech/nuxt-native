@@ -6,10 +6,12 @@ import {
   indexPage,
   nuxtConfig,
   packageJson,
+  projectReadme,
   tsconfig
 } from '../lib/scaffold-templates.mjs'
 import { run } from '../lib/run.mjs'
 import { init } from './init.mjs'
+import { stylingGuide, stylingAgentInstructions } from '../lib/styling-guide.mjs'
 
 /**
  * The one-command "ready to run on device" path: scaffolds a new Nuxt +
@@ -88,6 +90,9 @@ function scaffold(targetDir, { appId, appName, dependencySpec }) {
   mkdirSync(resolve(targetDir, 'app/pages'), { recursive: true })
 
   writeFileSync(resolve(targetDir, 'package.json'), packageJson(appName, dependencySpec))
+  writeFileSync(resolve(targetDir, 'README.md'), projectReadme())
+  writeFileSync(resolve(targetDir, 'STYLING.md'), stylingGuide())
+  writeFileSync(resolve(targetDir, 'AGENTS.md'), stylingAgentInstructions())
   writeFileSync(resolve(targetDir, 'nuxt.config.ts'), nuxtConfig(appId, appName))
   writeFileSync(resolve(targetDir, 'tsconfig.json'), tsconfig())
   writeFileSync(resolve(targetDir, '.gitignore'), gitignore())
