@@ -93,8 +93,8 @@ cd my-app
 npx nuxt-native dev android   # or: ios
 ```
 
-`create` scaffolds `nuxt.config.ts`, a starter `app/pages/index.vue` +
-`app/pages/details/[id].vue` demonstrating navigation, runs `npm install`,
+`create` scaffolds `nuxt.config.ts` and a starter `app/pages/index.vue`
+with a reactive counter and increment/decrement buttons, runs `npm install`,
 writes `nativescript.config.ts`, and runs `ns platform add` for each
 platform (`--platforms ios,android`, defaults to both) — including
 replacing the splash screen NativeScript's own template generates with

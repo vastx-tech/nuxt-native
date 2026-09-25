@@ -2,7 +2,6 @@ import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
   appVue,
-  detailsPage,
   gitignore,
   indexPage,
   nuxtConfig,
@@ -58,7 +57,7 @@ export async function create(name, { appId, platforms } = {}) {
 }
 
 function scaffold(targetDir, { appId, appName }) {
-  mkdirSync(resolve(targetDir, 'app/pages/details'), { recursive: true })
+  mkdirSync(resolve(targetDir, 'app/pages'), { recursive: true })
 
   writeFileSync(resolve(targetDir, 'package.json'), packageJson(appName))
   writeFileSync(resolve(targetDir, 'nuxt.config.ts'), nuxtConfig(appId, appName))
@@ -70,5 +69,4 @@ function scaffold(targetDir, { appId, appName }) {
   // one place for both create's fresh-scaffold path and init's
   // retrofit-an-existing-project path, instead of duplicating this here.
   writeFileSync(resolve(targetDir, 'app/pages/index.vue'), indexPage())
-  writeFileSync(resolve(targetDir, 'app/pages/details/[id].vue'), detailsPage())
 }
