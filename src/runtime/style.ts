@@ -29,8 +29,8 @@ import { colors, fontSizes, radii, spacing, type Spacing } from './theme'
  * no explicit import needed in a page/component, same as any composable.
  */
 
-export type StyleObject = Record<string, string | number>
-type ColorInput = keyof typeof colors | (string & {})
+export type StyleObject = Record<string, string | number | boolean>
+export type ColorInput = keyof typeof colors | (string & {})
 
 // 1rem = 16 device-independent pixels: NativeScript has no root-font-size/
 // rem concept of its own (confirmed: nothing in @nativescript/core's CSS
@@ -49,7 +49,8 @@ const REM_TO_DIP = 16
  */
 export type Length = Spacing | number | `${number}px` | `${number}rem`
 
-function resolveLength(value: Length): number {
+/** Exported for components (e.g. NSkeleton) that need a real DIP number to drive imperative native APIs (like View.animate()) rather than a style-object fragment. */
+export function resolveLength(value: Length): number {
   if (typeof value === 'number') return value
   if (value in spacing) return spacing[value as Spacing]
   const remMatch = /^(-?\d+(?:\.\d+)?)rem$/.exec(value)
@@ -59,7 +60,8 @@ function resolveLength(value: Length): number {
   throw new Error(`[nuxt-native] Invalid length: "${value}" — expected a spacing token, a number, or a "Npx"/"Nrem" string.`)
 }
 
-function resolveColor(input: ColorInput): string {
+/** Exported for components (e.g. NSkeleton) that need a resolved color string outside a style-object fragment. */
+export function resolveColor(input: ColorInput): string {
   return input in colors ? colors[input as keyof typeof colors] : input
 }
 
@@ -349,6 +351,15 @@ export interface TextStyleInput {
   maxLines?: number
   /** A real CSS text-shadow string (e.g. `'1 1 2 rgba(0,0,0,0.3)'`). */
   shadow?: string
+  /** Real CSS text-stroke (confirmed via css-stroke.js's own shorthand parser: `"<width> <color>"`). */
+  stroke?: { width: Length; color: ColorInput }
+  /**
+   * Real, confirmed `font-variation-settings` (variable-font axes, e.g.
+   * `'"wght" 600'`) — iOS only (affectsLayout is Apple-only in the
+   * source). Left as a raw string: the source's own value has no clean
+   * enum, just axis/value pairs.
+   */
+  variationSettings?: string
 }
 
 const fontWeights = { normal: '400', medium: '500', semibold: '600', bold: '700' } as const
@@ -374,6 +385,8 @@ export function textStyle(input: TextStyleInput): StyleObject {
   if (input.overflow !== undefined) style.textOverflow = input.overflow
   if (input.maxLines !== undefined) style.maxLines = input.maxLines
   if (input.shadow !== undefined) style.textShadow = input.shadow
+  if (input.stroke !== undefined) style.textStroke = `${resolveLength(input.stroke.width)} ${resolveColor(input.stroke.color)}`
+  if (input.variationSettings !== undefined) style.fontVariationSettings = input.variationSettings
   return style
 }
 
@@ -400,6 +413,8 @@ export interface FlexInput {
   /** Same values as `align`, plus `'auto'` (inherit the container's `align`) — a flex item's own override. */
   alignSelf?: 'auto' | 'flex-start' | 'flex-end' | 'center' | 'baseline' | 'stretch'
   order?: number
+  /** Confirmed real (FlexWrapBefore.parse) — forces the container to wrap onto a new line/column before this item. */
+  wrapBefore?: boolean
 }
 
 /** Flexbox container/item properties — the same real, confirmed-supported set NFlex/Tailwind's flex utilities target. */
@@ -417,6 +432,7 @@ export function flex(input: FlexInput): StyleObject {
   if (input.shrink !== undefined) style.flexShrink = input.shrink
   if (input.alignSelf !== undefined) style.alignSelf = input.alignSelf
   if (input.order !== undefined) style.order = input.order
+  if (input.wrapBefore !== undefined) style.flexWrapBefore = input.wrapBefore
   return style
 }
 
@@ -497,4 +513,19 @@ export function elevation(value: number, dynamicOffset?: number): StyleObject {
 /** iOS-only (affectsLayout is Apple-only in the source) — text/layout direction. */
 export function direction(value: 'ltr' | 'rtl'): StyleObject {
   return { direction: value }
+}
+
+/**
+ * A view's tint color — confirmed real, a genuine inherited `Style`
+ * property (tintColorProperty.register(Style) in image-common.js, despite
+ * living in that file), not just an Image-only property: real, native use
+ * includes NSwitch's on-tint on iOS.
+ */
+export function tintColor(color: ColorInput): StyleObject {
+  return { tintColor: resolveColor(color) }
+}
+
+/** Placeholder text color for NInput's underlying TextField/TextView (confirmed: editable-text-base-common.js's own placeholderColorProperty). */
+export function placeholder(color: ColorInput): StyleObject {
+  return { placeholderColor: resolveColor(color) }
 }

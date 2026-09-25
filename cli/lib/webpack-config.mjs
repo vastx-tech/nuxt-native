@@ -69,29 +69,6 @@ module.exports = (env) => {
     )
   })
 
-  // A *separate*, high-order chainWebpack call, not folded into the one
-  // above: @nativescript/webpack's resolveConfig() calls
-  // applyExternalConfigs() internally, which scans every dependency for
-  // its own top-level nativescript.webpack.js and auto-registers it —
-  // meaning nativescript-vue's require() above AND this auto-discovery
-  // both register its alias-setting chain (same default order 0), and the
-  // auto-discovered one runs *inside* resolveConfig()'s own call stack,
-  // i.e. strictly after anything this factory function registers directly.
-  // So a same-order override here would still lose to that duplicate,
-  // regardless of registration sequence — confirmed by instrumenting the
-  // chain functions directly, not assumed. An explicit higher \`order\`
-  // is the only thing that reliably wins, since webpackChains sorts by
-  // order first and only falls back to registration sequence for ties.
-  // See vue-compat.ts for why this override exists: compiler-dom compiles
-  // v-model on <input> to import vModelText from 'vue', which plain
-  // nativescript-vue doesn't have.
-  webpack.chainWebpack((config) => {
-    config.resolve.alias.set(
-      'vue',
-      require.resolve('nuxt-native/runtime/vue-compat.js')
-    )
-  }, { order: 10 })
-
   // Auto-import for composables (useWebSocket, useCamera, a project's own
   // app/composables/*, ...) — see auto-import-loader.cjs for why this is a
   // small first-party loader rather than the \`unimport\` package Nuxt
@@ -138,10 +115,9 @@ module.exports = (env) => {
   // in-build type-error reporting a project already gets another way (its
   // own \`vue-tsc\`/\`tsc\` script, or the editor's own TS server). So on a
   // small machine this is pure, avoidable memory pressure with no
-  // compile-time benefit, not a real tradeoff. \`order: 10\`, same reason
-  // as the vue alias override above: this plugin is registered by a
-  // callback @nativescript/webpack's own \`webpack.init(env)\` queues up,
-  // and needs to have already run before this one inspects the result.
+  // compile-time benefit, not a real tradeoff. \`order: 10\`: this plugin is
+  // registered by a callback @nativescript/webpack's own \`webpack.init(env)\`
+  // queues up, and needs to have already run before this one inspects the result.
   webpack.chainWebpack((config) => {
     if (!config.plugins.has('ForkTsCheckerWebpackPlugin')) return
 

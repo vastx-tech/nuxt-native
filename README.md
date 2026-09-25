@@ -51,6 +51,7 @@ tradeoff React Native and Flutter made, applied to the Nuxt/Vue ecosystem.
   (`<Frame>`, `<ActionBar>`, `<TabStrip>`, ...).
 - **A UI kit** (`<NButton>`, `<NText>`, `<NInput>`, `<NCard>`, `<NSwitch>`,
   `<NSpinner>`, `<NAvatar>`, `<NBadge>`, `<NDivider>`, `<NFlex>`,
+  `<NContainer>`, `<NetworkImage>`, `<CachedImage>`, `<NSkeleton>`,
   `useBottomSheet()`, `useModal()`) — themeable, sensibly-defaulted
   components on top of the primitives above, so building a real screen
   doesn't start from `<StackLayout>` and inline styles every time.
@@ -59,10 +60,6 @@ tradeoff React Native and Flutter made, applied to the Nuxt/Vue ecosystem.
   `class="flex-col items-center gap-4 bg-indigo-600 rounded-lg p-3"` on an
   `<NFlex>` or any UI kit component works the same way it would on web. See
   [UI kit](#ui-kit) below for what's in scope and why.
-- **Familiar HTML tag names** — `<div>`, `<p>`, `<img>`, `<input>`,
-  `<h1>`–`<h6>` compile straight to real native views, no import needed. See
-  [HTML tag names](#html-tag-names) below for the full mapping and what it
-  deliberately doesn't attempt.
 - **Pinia, as a first-class citizen** — install `pinia` and `nuxt-native
   init`/`create` wires `createPinia()` into the app bootstrap automatically.
   See [State management (Pinia)](#state-management-pinia) below.
@@ -184,6 +181,43 @@ component of your own as a bottom sheet or modal via nativescript-vue's
 real `$showModal` — your content component can dismiss itself by importing
 `$closeModal` from `'nativescript-vue'` directly.
 
+### Container, images, and loading placeholders
+
+```vue
+<template>
+  <NContainer :padding="'lg'" :background="'surface'" :radius="'md'" :elevated="true">
+    <CachedImage :src="product.imageUrl" :width="120" :height="120" :radius="'md'">
+      <template #fallback>
+        <NSkeleton :width="120" :height="120" radius="md" />
+      </template>
+    </CachedImage>
+  </NContainer>
+</template>
+```
+
+- **`<NContainer>`** — Flutter's `Container`: a single real child
+  (`ContentView`), decorated with the same `box()`/`padding()`/`margin()`/
+  `size()` style helpers as props instead of a `:style` object. It
+  positions *itself* within its own parent (`align` prop); NativeScript's
+  `ContentView` lays a single child out using that child's *own*
+  alignment, not something a wrapper can reach in and set — style the
+  child directly for that.
+- **`<NetworkImage>`** / **`<CachedImage>`** — `<Image src="https://...">`
+  (NativeScript's own primitive) already loads remote URLs natively; these
+  wrap it with a real loading spinner and a `#fallback` slot for failed
+  loads (there's no dedicated error event, so failure is detected by
+  "finished loading, no image set" — see `useRemoteImageState.ts`).
+  `CachedImage` forces `useCache: true`; `NetworkImage` defaults to
+  `false` (always re-fetches). That distinction is genuinely **Android-only**
+  — `useCache` doesn't exist on NativeScript's iOS `Image` at all (confirmed
+  by reading `index.ios.js`), so both behave the same there.
+- **`<NSkeleton>`** — a loading placeholder with a real animated shimmer
+  sweep, driven by NativeScript's own `View.animate()` (not CSS
+  `@keyframes` — an inline style object has nowhere to hang an
+  `animation-name`), looping via the confirmed-real
+  `iterations: Number.POSITIVE_INFINITY`, and stopped cleanly on unmount
+  via the animation promise's own `.cancel()`.
+
 ### Tailwind
 
 Nuxt Native uses **Tailwind v3 + the bundled `@nativescript/tailwind` adapter**.
@@ -282,67 +316,16 @@ NativeScript unit; it has no root-font-size concept of its own.
 | `bg(color)` / `bg({ color, image, repeat, position, size })` | Background color, or the full shorthand (`image` supports real `linear-gradient(...)`) |
 | `box({ radius, background, elevated, borderColor, borderWidth, opacity, clipPath })` | The common-case container look — single radius/border, optional shadow. NativeScript has no `overflow` property at all; `clipPath` (a real CSS `clip-path` shape string) is the only way to clip content |
 | `border({ width, color, radius, cornerShape })` | Per-side width/color, per-corner radius, `'round'`/`'squircle'` corners — reach for this over `box()` when sides need to differ |
-| `textStyle({ size, weight, color, align, family, style, decoration, transform, letterSpacing, lineHeight, whiteSpace, overflow, maxLines, shadow })` | Full text styling |
-| `flex({ direction, wrap, justify, align, alignContent, gap, rowGap, columnGap, grow, shrink, alignSelf, order })` | Flex container/item properties — **only takes effect on a real `<NFlex>`/`<FlexboxLayout>`**, same as flexbox only does anything on a flex container on web. `justify` genuinely doesn't support `'space-evenly'` — confirmed directly against NativeScript's flexbox implementation, not a Tailwind-only limitation |
+| `textStyle({ size, weight, color, align, family, style, decoration, transform, letterSpacing, lineHeight, whiteSpace, overflow, maxLines, shadow, stroke, variationSettings })` | Full text styling — `stroke: { width, color }` is real CSS `text-stroke`; `variationSettings` is a raw `font-variation-settings` string (variable-font axes), iOS-only |
+| `flex({ direction, wrap, justify, align, alignContent, gap, rowGap, columnGap, grow, shrink, alignSelf, order, wrapBefore })` | Flex container/item properties — **only takes effect on a real `<NFlex>`/`<FlexboxLayout>`**, same as flexbox only does anything on a flex container on web. `justify` genuinely doesn't support `'space-evenly'` — confirmed directly against NativeScript's flexbox implementation, not a Tailwind-only limitation. `wrapBefore` is a flex-item property that forces a wrap before that item |
 | `transform({ rotate, rotateX, rotateY, scaleX, scaleY, translateX, translateY, perspective })` | Real, literal-number transforms — works where Tailwind's `rotate-*`/`scale-*` utilities can't (they compose from CSS custom properties NativeScript's parser doesn't resolve) |
 | `align({ horizontal, vertical })` | A view's own position *within its parent* (`horizontalAlignment`/`verticalAlignment`) — a different concept from `flex`'s `align-items`, which positions children of a flex container |
 | `visible(value)` / `zIndex(value)` | `'visible' \| 'hidden' \| 'collapse'`; stacking order |
 | `elevation(value, dynamicOffset?)` | Android-only Material elevation shadow — use `box({ elevated: true })` instead for a cross-platform shadow |
 | `direction(value)` | iOS-only `'ltr' \| 'rtl'` |
+| `tintColor(color)` | A view's inherited tint color (real `Style`-level property — e.g. `NSwitch`'s on-tint on iOS) |
+| `placeholder(color)` | Placeholder text color for `NInput`'s underlying TextField/TextView |
 | `opacity(color, amount)` / `shade(color, amount)` / `tint(color, amount)` | Flutter-style color manipulation — `Color.withOpacity()`/`Color.shade*`, real hex/rgb math, `amount` is 0–1 |
-
-## HTML tag names
-
-Common HTML tags compile straight to real native views — no Vue component
-wrapper needed, no import:
-
-```vue
-<template>
-  <NPage title="Article">
-    <div class="p-5 gap-2">
-      <h1>Nuxt Native</h1>
-      <p>A real paragraph of wrapping text, styled with Tailwind.</p>
-      <p><strong>Bold</strong> and <em>italic</em> both work inline-ish.</p>
-      <img src="https://example.com/cover.png" />
-      <input v-model="query" placeholder="Search" />
-      <a @tap="openDocs">Read the docs</a>
-      <button @tap="openDocs">Native button</button>
-    </div>
-  </NPage>
-</template>
-
-<script setup lang="ts">
-import { ref } from 'vue'
-const query = ref('')
-function openDocs() { /* ... */ }
-</script>
-```
-
-`div`→`StackLayout`, `p`/`h1`–`h6`→`Label` (bold + sized for headings),
-`img`→`Image`, `input`→`TextField` (`v-model` works — see below),
-`a`/`strong`/`b`/`em`/`i`→styled `Label`s, `ul`/`ol`/`li`/`header`/`footer`/
-`nav`/`main`/`section`/`article`/`aside`/`form`→`StackLayout` (semantic
-sugar only, no visual distinction). `button`/`label`/`span` already resolve
-to NativeScript's real `Button`/`Label`/`Span` with zero extra work — tag
-matching is case/hyphen-insensitive.
-
-This is tag-name sugar over real native primitives, **not an HTML/CSS
-engine** — there's no block/inline text flow, no floats/position, no form
-submission, no table layout, and `<br>`/`<table>`/`<select>` aren't mapped
-to anything (there's no sane native equivalent). If you need to render
-actual arbitrary HTML/CSS (a CMS article, a third-party checkout page),
-that's what NativeScript's own `<WebView>` is for — mixed in only where you
-actually need it, not as the whole app's rendering model. See
-[ARCHITECTURE.md](./ARCHITECTURE.md) for why "compile arbitrary HTML/CSS to
-native with no WebView" isn't attempted here — it's the scope of a browser
-engine, not a framework feature.
-
-`v-model` on `<input>` needed one extra fix worth knowing about: Vue's
-compiler treats real HTML form tags specially and compiles `v-model` there
-to import a `vModelText` helper from `'vue'` — which plain
-`nativescript-vue` doesn't have (it re-exports `@vue/runtime-core`, no
-DOM). `nuxt-native` ships its own `vModelText` for NativeScript's
-`TextField`, aliased in automatically. Nothing to configure.
 
 ## State management (Pinia)
 

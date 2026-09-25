@@ -116,7 +116,11 @@ const RUNTIME_COMPONENTS = [
   { tag: 'NSpinner', specifier: 'nuxt-native/runtime/components/NSpinner.vue' },
   { tag: 'NAvatar', specifier: 'nuxt-native/runtime/components/NAvatar.vue' },
   { tag: 'NBadge', specifier: 'nuxt-native/runtime/components/NBadge.vue' },
-  { tag: 'NDivider', specifier: 'nuxt-native/runtime/components/NDivider.vue' }
+  { tag: 'NDivider', specifier: 'nuxt-native/runtime/components/NDivider.vue' },
+  { tag: 'NContainer', specifier: 'nuxt-native/runtime/components/NContainer.vue' },
+  { tag: 'NetworkImage', specifier: 'nuxt-native/runtime/components/NetworkImage.vue' },
+  { tag: 'CachedImage', specifier: 'nuxt-native/runtime/components/CachedImage.vue' },
+  { tag: 'NSkeleton', specifier: 'nuxt-native/runtime/components/NSkeleton.vue' }
   // NBottomSheet deliberately excluded: it's shown imperatively via
   // useBottomSheet()'s $showModal call (which references it by direct JS
   // import, not by template tag name), never used as a template tag
@@ -173,11 +177,8 @@ function renderAppEntry({ usePinia } = {}) {
   const piniaUse = usePinia ? '  .use(createPinia())\n' : ''
 
   return `import { createApp } from 'nativescript-vue'
-import { registerHtmlElements } from 'nuxt-native/runtime/html-elements.js'
 ${piniaImport}import RootFrame from './root-frame.vue'
 ${imports}
-
-registerHtmlElements()
 
 createApp(RootFrame)
 ${piniaUse}${registrations}

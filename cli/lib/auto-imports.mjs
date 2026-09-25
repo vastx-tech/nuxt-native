@@ -53,7 +53,9 @@ const NUXT_NATIVE_COMPOSABLES = [
   { name: 'transform', from: 'nuxt-native/runtime/style.js' },
   { name: 'align', from: 'nuxt-native/runtime/style.js' },
   { name: 'elevation', from: 'nuxt-native/runtime/style.js' },
-  { name: 'direction', from: 'nuxt-native/runtime/style.js' }
+  { name: 'direction', from: 'nuxt-native/runtime/style.js' },
+  { name: 'tintColor', from: 'nuxt-native/runtime/style.js' },
+  { name: 'placeholder', from: 'nuxt-native/runtime/style.js' }
 ]
 
 /**
