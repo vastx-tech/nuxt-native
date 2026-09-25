@@ -69,6 +69,10 @@ tradeoff React Native and Flutter made, applied to the Nuxt/Vue ecosystem.
 - **`useWebSocket()`** — real native WebSocket support (OkHttp on Android,
   `NSURLSessionWebSocketTask` on iOS), no npm plugin dependency. See
   [Real-time networking](#real-time-networking-usewebsocket) below.
+- **Supabase works as-is** for database/auth/storage/edge functions (no
+  native code in any of its packages, and NativeScript already provides
+  the `fetch` it needs) — Realtime needs one extra adapter. See
+  [Third-party backends (Supabase)](#third-party-backends-supabase) below.
 - **The `nuxt-native` CLI** generates the on-device bootstrap from
   `app/pages` and hands off to NativeScript's own toolchain (`ns run`,
   `ns build`) for the actual native compile/deploy/LiveSync — that's
@@ -475,6 +479,90 @@ cleartext exception only applies to debug builds. The iOS implementation
 is unverified in the same way every other iOS code path in this framework
 is (no Xcode/macOS access at all) — a real, best-effort implementation
 against Apple's documented API, not a stub, but not compiled or run.
+
+## Third-party backends (Supabase)
+
+`@supabase/supabase-js` and its sub-packages (auth/postgrest/storage/
+functions) are plain JS/TS — no native Android/iOS code at all (checked
+directly: none of its five sub-packages ship a `platforms/`, `.gradle`, or
+`.podspec`), so there's no linking step, just:
+
+```bash
+npm install @supabase/supabase-js
+```
+
+Database queries, auth, storage, and edge functions work as-is: every one
+of them falls back to a bare `fetch(...)` call if not overridden (confirmed
+by reading each package's own `resolveFetch`), and NativeScript's own
+`@nativescript/core/globals` already installs a real `global.fetch`/
+`Headers`/`Request`/`Response` — no `cross-fetch`/polyfill needed. The
+auth client's session storage falls back to in-memory (it correctly
+detects there's no `window`/`localStorage`, doesn't crash) unless you give
+it a real one — back it with `@nativescript/core`'s sync
+`application-settings` module so a session survives an app restart:
+
+```ts
+// app/composables/useSupabase.ts
+import { createClient } from '@supabase/supabase-js'
+import { getString, setString, remove } from '@nativescript/core/application-settings'
+
+const nativeStorage = {
+  getItem: (key: string) => getString(key, ''),
+  setItem: (key: string, value: string) => setString(key, value),
+  removeItem: (key: string) => remove(key)
+}
+
+// The URL/anon key are meant to be embedded in a client — Supabase's own
+// model protects data via Row Level Security, not by hiding this key.
+// Never put a service_role key here; there is no server in this app to
+// keep it secret from.
+export const supabase = createClient(
+  'https://YOUR-PROJECT.supabase.co',
+  'YOUR-ANON-KEY',
+  { auth: { storage: nativeStorage } }
+)
+```
+
+**Realtime (`supabase.channel(...)`) needs one more piece.**
+`@supabase/realtime-js` requires a global `WebSocket` constructor and
+throws `"WebSocket not available"` without one — NativeScript has no
+global `WebSocket`, only this framework's own `useWebSocket()` composable
+(a different API shape). It accepts a custom `options.transport`, though,
+so this is solvable with a small adapter class wrapping `useWebSocket()`'s
+native mechanism in the standard `WebSocket` interface shape
+(`onopen`/`onmessage`/`onclose`/`onerror`/`send()`/`close()`/`readyState`)
+— not shipped yet, since no project has needed it yet.
+
+## Performance
+
+Two different problems — compile speed and runtime FPS — with different
+levers:
+
+- **Lists**: a plain `v-for` over `NCard`/`NFlex` keeps every item as a
+  live, permanent native view forever. `<ListView>` (real, confirmed view
+  recycling — `recycleNativeView: 'auto'`, backed by Android's
+  RecyclerView / iOS's `UITableView` cell reuse) is the single biggest
+  lever for scroll smoothness once a list goes past ~20–30 items.
+- **Image decode size**: an `<Image>` with no `decode-width`/
+  `decode-height` fully decodes the source resolution into memory even
+  when displayed much smaller — real, confirmed properties on `ImageBase`
+  that cap decode resolution to what's actually rendered. Matters most on
+  image-heavy scrolling lists.
+- **Animations should be native, not JS-driven**: `NSkeleton`'s shimmer
+  uses `View.animate()`, which hands the animation off to the platform's
+  own compositor (Android `ValueAnimator`/iOS `CAAnimation`) instead of a
+  JS per-frame loop — this is what lets it track a 120Hz display for free
+  rather than being capped by JS thread timing. Prefer `View.animate()`
+  over a reactive `:style` mutated on an interval for anything continuous.
+- **Layout nesting depth**: NativeScript's layout is a real native
+  measure/layout pass per nesting level — flattening deeply nested
+  `NFlex`-in-`NFlex`-in-`NCard` chains into `GridLayout` cells reduces
+  layout-pass cost on every scroll frame.
+- **Build speed**: `ts-loader` already runs with `transpileOnly: true`
+  and a memory-tuned `ForkTsCheckerWebpackPlugin` (see below). Adding
+  `cache: { type: 'filesystem' }` to a project's `webpack.config.cjs` is
+  the next real win for incremental `dev` rebuilds — webpack's own
+  persistent disk cache skips re-parsing unchanged modules entirely.
 
 ## Gradle memory tuning
 
