@@ -299,41 +299,21 @@ export function appVue() {
 
 export function indexPage() {
   return `<template>
-  <NPage title="Home">
+  <NPage title="Counter">
     <NFlex class="flex-col p-5 gap-4">
-      <Label :text="\`Running on \${device.os} \${device.osVersion}\`" class="text-base" />
-      <Button text="Go to details" class="bg-indigo-600 text-white rounded-lg p-3" @tap="openDetails" />
+      <Label text="Welcome to Nuxt Native" class="text-2xl font-bold text-center" />
+      <Label text="Tap the buttons to change the count." class="text-base text-center" />
+      <Label :text="String(count)" class="text-5xl font-bold text-center" />
+      <Button text="Increment +" class="bg-indigo-600 text-white rounded-lg p-3" @tap="count++" />
+      <Button text="Decrement -" class="bg-slate-600 text-white rounded-lg p-3" @tap="count--" />
     </NFlex>
   </NPage>
 </template>
 
 <script setup lang="ts">
-// No imports needed — useDevice() and useNativeRouter() are auto-imported
-// (see cli/lib/auto-import-loader.mjs in nuxt-native's own repo for how).
-const device = useDevice()
-const { navigate } = useNativeRouter()
+import { ref } from 'vue'
 
-function openDetails() {
-  navigate('details_id', { params: { id: '42' } })
-}
-</script>
-`
-}
-
-export function detailsPage() {
-  return `<template>
-  <NPage title="Details">
-    <NFlex class="flex-col p-5 gap-4">
-      <Label :text="\`Item #\${id}\`" class="text-base" />
-      <Button text="Back" class="bg-slate-600 text-white rounded-lg p-3" @tap="back" />
-    </NFlex>
-  </NPage>
-</template>
-
-<script setup lang="ts">
-const props = defineProps<{ id?: string }>()
-const id = props.id ?? 'unknown'
-const { back } = useNativeRouter()
+const count = ref(0)
 </script>
 `
 }
