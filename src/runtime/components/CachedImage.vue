@@ -5,6 +5,8 @@
       :stretch="stretch"
       load-mode="async"
       use-cache="true"
+      :decode-width="decodeWidth"
+      :decode-height="decodeHeight"
       :style="imageStyle"
       @is-loading-change="onIsLoadingChange"
     />
@@ -15,7 +17,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { box, size, type BoxStyleInput, type Length } from '../style'
+import { box, resolveLength, size, type BoxStyleInput, type Length } from '../style'
 import { useRemoteImageState } from '../composables/useRemoteImageState'
 
 /**
@@ -51,6 +53,11 @@ const frameStyle = computed(() => ({
 }))
 
 const imageStyle = computed(() => size({ width: props.width, height: props.height }))
+
+// Caps decode resolution to the size this actually renders at — see
+// NetworkImage's own comment on decodeWidth/decodeHeight for why.
+const decodeWidth = computed(() => resolveLength(props.width))
+const decodeHeight = computed(() => resolveLength(props.height))
 
 const spinnerStyle = { horizontalAlignment: 'center' as const, verticalAlignment: 'middle' as const }
 </script>

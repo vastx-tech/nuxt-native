@@ -1,15 +1,28 @@
 <template>
-  <NPage title="Shop">
-    <NFlex class="flex-col p-5 gap-4">
+  <!-- scrollable="false": a <ListView> is its own scrolling, cell-
+       recycling container (real view reuse — Android RecyclerView/iOS
+       UITableView cell reuse under the hood, confirmed via
+       recycleNativeView: 'auto' in list-view-common.js) — nesting it
+       inside NPage's default ScrollView would force it to measure its
+       full, unbounded content height to fit the outer scroller, which
+       defeats recycling entirely (only ever renders a fixed few
+       screen-fuls of cells if given a real bounded height instead). -->
+  <NPage title="Shop" :scrollable="false">
+    <NFlex class="flex-col p-5 gap-4" style="height: 100%">
       <SectionHeader title="Featured gear" :subtitle="`${products.length} items`" />
 
-      <ProductCard
-        v-for="product in products"
-        :key="product.id"
-        :product="product"
-        @tap="openProduct(product.id)"
-        @add="cart.addItem(product)"
-      />
+      <!-- flexGrow: 1 gives the list the header/button's leftover space
+           in this flex column — the same real flex-item property
+           flex()'s own `grow` option sets, just written inline here. -->
+      <ListView :items="products" style="flexGrow: 1">
+        <template #default="{ item }">
+          <ProductCard
+            :product="item"
+            @tap="openProduct(item.id)"
+            @add="cart.addItem(item)"
+          />
+        </template>
+      </ListView>
 
       <NButton
         :text="`View cart (${cart.itemCount})`"

@@ -5,6 +5,8 @@
       :stretch="stretch"
       load-mode="async"
       :use-cache="useCache"
+      :decode-width="decodeWidth"
+      :decode-height="decodeHeight"
       :style="imageStyle"
       @is-loading-change="onIsLoadingChange"
     />
@@ -15,7 +17,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { box, size, type BoxStyleInput, type Length } from '../style'
+import { box, resolveLength, size, type BoxStyleInput, type Length } from '../style'
 import { useRemoteImageState } from '../composables/useRemoteImageState'
 
 /**
@@ -57,6 +59,15 @@ const frameStyle = computed(() => ({
 }))
 
 const imageStyle = computed(() => size({ width: props.width, height: props.height }))
+
+// Caps decode resolution to the size this actually renders at instead of
+// the source's full resolution — real properties confirmed on ImageBase
+// (decodeWidthProperty/decodeHeightProperty), read by both platforms'
+// _createImageSourceFromSrc before the bitmap is even allocated. A 4000px
+// source shown at 120dip would otherwise fully decode into memory at its
+// native size on every load.
+const decodeWidth = computed(() => resolveLength(props.width))
+const decodeHeight = computed(() => resolveLength(props.height))
 
 const spinnerStyle = { horizontalAlignment: 'center' as const, verticalAlignment: 'middle' as const }
 </script>
