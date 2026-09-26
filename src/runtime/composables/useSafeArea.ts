@@ -1,5 +1,5 @@
 import { ref, onMounted, onUnmounted } from 'vue'
-import { Application, Frame, Page, View } from '@nativescript/core'
+import { Application, Frame, Page, Utils, View } from '@nativescript/core'
 
 export interface SafeAreaInsets {
   top: number
@@ -93,7 +93,22 @@ export function useSafeArea() {
     if (page) attachListeners(page)
     const area = page?.getSafeAreaInsets()
     if (area) {
-      insets.value = { top: area.top, bottom: area.bottom, left: area.left, right: area.right }
+      // getSafeAreaInsets() returns device pixels, not DIPs (confirmed:
+      // ui/core/view/index.ios.js runs the real UIKit safeAreaInsets
+      // through layout.toDevicePixels() before returning it) — but every
+      // consumer of this composable (NPage's own padding style) expects
+      // plain DIP numbers, the same unit every other numeric style value
+      // in this framework already uses. Converting back with the real,
+      // confirmed inverse (layout.toDeviceIndependentPixels()) matters
+      // most on higher-density screens: an uncorrected 3x device reserved
+      // 3x too much edge padding, confirmed on a real iPhone XS (102
+      // device px read back as 102 DIP instead of the real 34).
+      insets.value = {
+        top: Utils.layout.toDeviceIndependentPixels(area.top),
+        bottom: Utils.layout.toDeviceIndependentPixels(area.bottom),
+        left: Utils.layout.toDeviceIndependentPixels(area.left),
+        right: Utils.layout.toDeviceIndependentPixels(area.right)
+      }
     }
   }
 
