@@ -1,4 +1,4 @@
-import { ref, onMounted, onUnmounted, type Ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { Application, Frame, Page, View } from '@nativescript/core'
 
 export interface SafeAreaInsets {
@@ -9,8 +9,8 @@ export interface SafeAreaInsets {
 }
 
 /**
- * Reactive safe-area insets (notches, status bars, home indicators) for a
- * page, re-measured on orientation change. Use this instead of CSS
+ * Reactive safe-area insets (notches, status bars, home indicators) for the
+ * current page, re-measured on orientation change. Use this instead of CSS
  * `env(safe-area-inset-*)` — there is no browser engine here to resolve it.
  *
  * On iOS, `getSafeAreaInsets()` reads `nativeViewProtected.safeAreaInsets`
@@ -34,28 +34,33 @@ export interface SafeAreaInsets {
  * 4. Root cause, confirmed by reading `frame-common.js`'s `setCurrent()`
  *    directly: `Frame.currentPage` only flips (and `Page`'s own
  *    `navigatedToEvent` only fires) once `_processNextNavigationEntry()`
- *    actually processes the queued navigation — which is asynchronous
- *    relative to `nativescript-vue`'s own `Frame` `nodeOps.insert()` call
- *    (`frame.navigate({ create: () => child.nativeView })`) that triggers
- *    it. If this composable's `onMounted` — inside the very page being
- *    navigated to — runs before that queue drains, `Frame.topmost()?.
- *    currentPage` can read `null`/the *previous* page, captured once into
- *    a closure variable and never corrected: every listener and the retry
- *    loop kept reading that same wrong reference forever, matching a flat
- *    zero result regardless of how long the retry window was.
+ *    actually processes the queued navigation — asynchronous relative to
+ *    `nativescript-vue`'s own `Frame` `nodeOps.insert()` call that
+ *    triggers it. Caching `Frame.topmost()?.currentPage` once in
+ *    `onMounted` (inside the very page being navigated to) could read
+ *    `null`/the *previous* page if that queue hadn't drained yet — and
+ *    once cached wrong, it stayed wrong: every listener and the retry
+ *    loop kept reading the same stale reference forever, matching a flat
+ *    zero result regardless of retry-window length.
  *
- * Fixed by accepting an optional `Ref` to the exact `Page` this call cares
- * about, resolved fresh on every read instead of cached once — `NPage.vue`
- * passes a template ref on its own `<Page>` element, which Vue populates
- * during that component's own mount/patch phase, strictly before any
- * `onMounted` hook (including this composable's) runs, so it can't race
- * against `Frame`'s separate, asynchronous navigation-queue timing at all.
- * `ViewBase.page` (`ui/core/view-base/index.js`) — a plain getter walking
- * `this.parent.page` up a view's own real parent chain, confirmed real —
- * is the same category of fix, but the explicit page ref is more direct
- * here since `NPage.vue` already owns the exact `<Page>` in question.
- * Called with no argument, this falls back to the original
- * `Frame.topmost()?.currentPage` lookup for any other caller.
+ *    A follow-up fix (passing an explicit template `Ref` to the exact
+ *    `Page`, resolved fresh via the ref instead of a cached variable)
+ *    crashed the app on launch with a native `tns::NativeScriptException`
+ *    on every page, reproduced independently of any of the retry/test
+ *    scaffolding around it — a real regression, reverted. Root cause not
+ *    confirmed (no device-side JS stack trace was obtainable to pin it
+ *    down further), so that approach — a template `ref` on `<Page>` in
+ *    `NPage.vue` — is deliberately not used here until it's understood.
+ *
+ * Fixed instead by never caching the page at all: `measure()` re-resolves
+ * `Frame.topmost()?.currentPage` fresh on every call (including every
+ * retry tick), so once the navigation queue actually drains — well within
+ * the retry window, per the timing already confirmed sufficient in round
+ * 3 — it starts reading the real, current page instead of a stale one.
+ * Event listeners follow the same self-healing rule: `measure()` attaches
+ * them to whichever page it just resolved, migrating off the previous one
+ * first if a different page shows up later (covers real navigation to a
+ * new page while this composable's the active one, not just first mount).
  */
 const MAX_MEASURE_ATTEMPTS = 15
 const MEASURE_RETRY_DELAY_MS = 100
@@ -64,17 +69,29 @@ function isZeroInsets(area: SafeAreaInsets): boolean {
   return area.top === 0 && area.bottom === 0 && area.left === 0 && area.right === 0
 }
 
-export function useSafeArea(pageRef?: Ref<Page | null | undefined>) {
+export function useSafeArea() {
   const insets = ref<SafeAreaInsets>({ top: 0, bottom: 0, left: 0, right: 0 })
-  let fallbackPage: Page | undefined
+  let attachedPage: Page | undefined
   let retryTimer: ReturnType<typeof setTimeout> | undefined
 
-  function currentPage(): Page | undefined {
-    return pageRef ? (pageRef.value ?? undefined) : fallbackPage
+  function attachListeners(page: Page) {
+    if (attachedPage === page) return
+    detachListeners()
+    page.on(View.layoutChangedEvent, measure)
+    page.on(Page.navigatedToEvent, measure)
+    attachedPage = page
+  }
+
+  function detachListeners() {
+    attachedPage?.off(View.layoutChangedEvent, measure)
+    attachedPage?.off(Page.navigatedToEvent, measure)
+    attachedPage = undefined
   }
 
   function measure() {
-    const area = currentPage()?.getSafeAreaInsets()
+    const page = Frame.topmost()?.currentPage
+    if (page) attachListeners(page)
+    const area = page?.getSafeAreaInsets()
     if (area) {
       insets.value = { top: area.top, bottom: area.bottom, left: area.left, right: area.right }
     }
@@ -88,18 +105,14 @@ export function useSafeArea(pageRef?: Ref<Page | null | undefined>) {
   }
 
   onMounted(() => {
-    if (!pageRef) fallbackPage = Frame.topmost()?.currentPage
     measureWithRetry(MAX_MEASURE_ATTEMPTS)
     Application.on(Application.orientationChangedEvent, measure)
-    currentPage()?.on(View.layoutChangedEvent, measure)
-    currentPage()?.on(Page.navigatedToEvent, measure)
   })
 
   onUnmounted(() => {
     if (retryTimer !== undefined) clearTimeout(retryTimer)
     Application.off(Application.orientationChangedEvent, measure)
-    currentPage()?.off(View.layoutChangedEvent, measure)
-    currentPage()?.off(Page.navigatedToEvent, measure)
+    detachListeners()
   })
 
   return insets
