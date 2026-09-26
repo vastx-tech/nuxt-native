@@ -41,8 +41,21 @@ test('fills in every missing required key on a bare Info.plist', (t) => {
   assert.match(content, /<key>CFBundlePackageType<\/key>\s*<string>APPL<\/string>/)
   assert.match(content, /<key>CFBundleShortVersionString<\/key>\s*<string>1\.0<\/string>/)
   assert.match(content, /<key>CFBundleVersion<\/key>\s*<string>1<\/string>/)
+  // The second real symptom this fixes (screen doesn't fill the device) —
+  // confirmed missing from a real broken project alongside CFBundleExecutable.
+  assert.match(content, /<key>UILaunchStoryboardName<\/key>\s*<string>LaunchScreen<\/string>/)
+  assert.match(content, /<key>UIRequiredDeviceCapabilities<\/key>\s*<array>[\s\S]*?<\/array>/)
+  assert.match(content, /<key>UIApplicationSceneManifest<\/key>\s*<dict>[\s\S]*?<\/dict>/)
   // Untouched: not this function's job to alter keys that already exist.
   assert.match(content, /<key>CFBundleDisplayName<\/key>\s*<string>job-portal<\/string>/)
+  // Every opening tag this function can introduce (plain string values, one
+  // <array>, one <dict>) has a matching close — a real, if crude, check
+  // that the insertion logic never produces malformed XML.
+  for (const tag of ['dict', 'array']) {
+    const opens = (content.match(new RegExp(`<${tag}>`, 'g')) ?? []).length
+    const closes = (content.match(new RegExp(`</${tag}>`, 'g')) ?? []).length
+    assert.equal(opens, closes, `mismatched <${tag}> tags`)
+  }
 })
 
 test('is idempotent and never duplicates a key', (t) => {
