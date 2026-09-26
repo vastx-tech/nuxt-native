@@ -12,18 +12,26 @@ import { join } from 'node:path'
  * a fresh `nuxt-native create --platforms ios` project — every key below
  * is missing from the broken one and present in the real template.
  *
- * Two real, independently-confirmed symptoms trace back to this:
+ * Three real, independently-confirmed symptoms trace back to this:
  * 1. `CFBundleExecutable` missing → `xcrun simctl install` fails with
  *    "missing or invalid CFBundleExecutable in its Info.plist" — the
  *    exact error, and the exact fix, also documented in NativeScript's own
  *    tracker (github.com/NativeScript/nativescript-cli#4048).
- * 2. `UILaunchStoryboardName` missing → the app installs and launches,
- *    but doesn't fill the screen (iOS falls back to legacy scaled
- *    compatibility mode without a valid launch-screen reference) —
- *    confirmed on a real physical device. The referenced `LaunchScreen`
- *    storyboard itself isn't missing (it's a separate file from Info.plist,
- *    and this framework's own `splash.mjs` already writes into its image
- *    assets successfully) — only the Info.plist key pointing at it was.
+ * 2. No launch-screen key at all → the app installs and launches, but
+ *    doesn't fill the screen (iOS falls back to legacy scaled
+ *    compatibility mode without one) — confirmed on a real physical
+ *    device.
+ * 3. A real, live project's broken scaffold can *also* be missing the
+ *    `LaunchScreen.storyboard` file itself, not just the Info.plist key
+ *    pointing at it (confirmed on a real device by a separate session
+ *    working the same bug directly) — unconditionally writing
+ *    `UILaunchStoryboardName` in that case would trade the scaling bug
+ *    for a hard launch crash ("Could not find a storyboard named
+ *    'LaunchScreen'"), strictly worse. So this checks whether the
+ *    storyboard file actually exists first: if it does, point at it; if
+ *    not, fall back to `UILaunchScreen` as an empty dict — Apple's own
+ *    real, documented storyboard-less launch screen mechanism, which
+ *    depends on no file at all.
  *
  * Only inserts a key if it's entirely missing — never overwrites an
  * existing value (that's `app-version.mjs`'s job for the two version
@@ -41,7 +49,6 @@ const REQUIRED_KEYS = {
   CFBundleSignature: '<string>????</string>',
   CFBundleVersion: '<string>1</string>',
   LSRequiresIPhoneOS: '<true/>',
-  UILaunchStoryboardName: '<string>LaunchScreen</string>',
   UIRequiresFullScreen: '<true/>',
   UIRequiredDeviceCapabilities: '<array>\n\t\t<string>armv7</string>\n\t</array>',
   UISupportedInterfaceOrientations: '<array>\n\t\t<string>UIInterfaceOrientationPortrait</string>\n\t\t<string>UIInterfaceOrientationLandscapeLeft</string>\n\t\t<string>UIInterfaceOrientationLandscapeRight</string>\n\t</array>',
@@ -59,6 +66,17 @@ export function ensureIosInfoPlistKeys(projectRoot) {
   for (const [key, value] of Object.entries(REQUIRED_KEYS)) {
     if (new RegExp(`<key>${key}</key>`).test(content)) continue
     content = content.replace('<dict>', `<dict>\n\t<key>${key}</key>\n\t${value}`)
+    changed = true
+  }
+
+  const hasLaunchStoryboard = /<key>UILaunchStoryboardName<\/key>/.test(content)
+  const hasLaunchScreen = /<key>UILaunchScreen<\/key>/.test(content)
+  if (!hasLaunchStoryboard && !hasLaunchScreen) {
+    const storyboardPath = join(projectRoot, 'App_Resources', 'iOS', 'LaunchScreen.storyboard')
+    const entry = existsSync(storyboardPath)
+      ? '<key>UILaunchStoryboardName</key>\n\t<string>LaunchScreen</string>'
+      : '<key>UILaunchScreen</key>\n\t<dict/>'
+    content = content.replace('<dict>', `<dict>\n\t${entry}`)
     changed = true
   }
 

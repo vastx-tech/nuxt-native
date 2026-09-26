@@ -27,7 +27,7 @@ const BROKEN_PLIST = `<?xml version="1.0" encoding="UTF-8"?>
 </plist>
 `
 
-test('fills in every missing required key on a bare Info.plist', (t) => {
+test('fills in every missing required key on a bare Info.plist (no storyboard file)', (t) => {
   const dir = fixture(t)
   mkdirSync(join(dir, 'App_Resources/iOS'), { recursive: true })
   const path = join(dir, 'App_Resources/iOS/Info.plist')
@@ -41,21 +41,58 @@ test('fills in every missing required key on a bare Info.plist', (t) => {
   assert.match(content, /<key>CFBundlePackageType<\/key>\s*<string>APPL<\/string>/)
   assert.match(content, /<key>CFBundleShortVersionString<\/key>\s*<string>1\.0<\/string>/)
   assert.match(content, /<key>CFBundleVersion<\/key>\s*<string>1<\/string>/)
-  // The second real symptom this fixes (screen doesn't fill the device) —
-  // confirmed missing from a real broken project alongside CFBundleExecutable.
-  assert.match(content, /<key>UILaunchStoryboardName<\/key>\s*<string>LaunchScreen<\/string>/)
+  // No LaunchScreen.storyboard file exists in this fixture — a real,
+  // reproduced case (see ios-infoplist-fix.mjs's own comment) where
+  // pointing UILaunchStoryboardName at a nonexistent file would be a hard
+  // launch crash, strictly worse than the scaling bug this fixes. Must use
+  // the storyboard-less UILaunchScreen fallback instead.
+  assert.match(content, /<key>UILaunchScreen<\/key>\s*<dict\s*\/>/)
+  assert.doesNotMatch(content, /<key>UILaunchStoryboardName<\/key>/)
   assert.match(content, /<key>UIRequiredDeviceCapabilities<\/key>\s*<array>[\s\S]*?<\/array>/)
   assert.match(content, /<key>UIApplicationSceneManifest<\/key>\s*<dict>[\s\S]*?<\/dict>/)
   // Untouched: not this function's job to alter keys that already exist.
   assert.match(content, /<key>CFBundleDisplayName<\/key>\s*<string>job-portal<\/string>/)
   // Every opening tag this function can introduce (plain string values, one
   // <array>, one <dict>) has a matching close — a real, if crude, check
-  // that the insertion logic never produces malformed XML.
+  // that the insertion logic never produces malformed XML. A self-closing
+  // <dict/> has no separate opening/closing tag to balance, so exclude it.
+  const withoutSelfClosingDict = content.replace(/<dict\s*\/>/g, '')
   for (const tag of ['dict', 'array']) {
-    const opens = (content.match(new RegExp(`<${tag}>`, 'g')) ?? []).length
-    const closes = (content.match(new RegExp(`</${tag}>`, 'g')) ?? []).length
+    const opens = (withoutSelfClosingDict.match(new RegExp(`<${tag}>`, 'g')) ?? []).length
+    const closes = (withoutSelfClosingDict.match(new RegExp(`</${tag}>`, 'g')) ?? []).length
     assert.equal(opens, closes, `mismatched <${tag}> tags`)
   }
+})
+
+test('points at the real storyboard when LaunchScreen.storyboard exists', (t) => {
+  const dir = fixture(t)
+  mkdirSync(join(dir, 'App_Resources/iOS'), { recursive: true })
+  writeFileSync(join(dir, 'App_Resources/iOS/LaunchScreen.storyboard'), '<?xml version="1.0"?><document/>')
+  const path = join(dir, 'App_Resources/iOS/Info.plist')
+  writeFileSync(path, BROKEN_PLIST)
+
+  ensureIosInfoPlistKeys(dir)
+
+  const content = readFileSync(path, 'utf8')
+  assert.match(content, /<key>UILaunchStoryboardName<\/key>\s*<string>LaunchScreen<\/string>/)
+  assert.doesNotMatch(content, /<key>UILaunchScreen<\/key>/)
+})
+
+test('never adds a launch-screen key when one already exists', (t) => {
+  const dir = fixture(t)
+  mkdirSync(join(dir, 'App_Resources/iOS'), { recursive: true })
+  const path = join(dir, 'App_Resources/iOS/Info.plist')
+  const custom = BROKEN_PLIST.replace(
+    '<dict>',
+    '<dict>\n\t<key>UILaunchStoryboardName</key>\n\t<string>CustomLaunch</string>'
+  )
+  writeFileSync(path, custom)
+
+  ensureIosInfoPlistKeys(dir)
+
+  const content = readFileSync(path, 'utf8')
+  assert.match(content, /<key>UILaunchStoryboardName<\/key>\s*<string>CustomLaunch<\/string>/)
+  assert.doesNotMatch(content, /<key>UILaunchScreen<\/key>/)
 })
 
 test('is idempotent and never duplicates a key', (t) => {
