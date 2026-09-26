@@ -4,6 +4,7 @@ import { ensureGradleMemorySettings } from './gradle-tuning.mjs'
 import { ensureManifestNamespaceFix } from './manifest-namespace-fix.mjs'
 import { ensureWebSocketDependency } from './websocket-setup.mjs'
 import { ensureNetworkSecurityConfig } from './network-security-setup.mjs'
+import { ensureIosInfoPlistKeys } from './ios-infoplist-fix.mjs'
 import { runPluginSetup } from './plugins.mjs'
 
 /**
@@ -33,6 +34,11 @@ export async function ensureProjectSetup(projectRoot, config, platforms) {
 
     ensureNetworkSecurityConfig(projectRoot)
     console.log('[nuxt-native] Added a debug-only cleartext exception for useWebSocket() dev servers (127.0.0.1/10.0.2.2/localhost)')
+  }
+
+  if (platforms.includes('ios')) {
+    ensureIosInfoPlistKeys(projectRoot)
+    console.log('[nuxt-native] Verified App_Resources/iOS/Info.plist has the keys Xcode needs (CFBundleExecutable, ...)')
   }
 
   await runPluginSetup(projectRoot, config.plugins, platforms)

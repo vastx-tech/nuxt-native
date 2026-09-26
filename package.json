@@ -38,9 +38,10 @@
     "native:dev:android": "node ./bin/nuxt-native.mjs dev android",
     "lint": "eslint .",
     "typecheck": "vue-tsc --noEmit",
-    "test": "node --test cli/tests/styling.test.mjs mcp-server/packaged-cli.test.mjs",
+    "test": "node --test cli/tests/styling.test.mjs cli/tests/ios-infoplist-fix.test.mjs mcp-server/packaged-cli.test.mjs",
     "test:mcp": "node --test mcp-server/packaged-cli.test.mjs",
-    "test:styling": "node --test cli/tests/styling.test.mjs"
+    "test:styling": "node --test cli/tests/styling.test.mjs",
+    "test:ios-infoplist": "node --test cli/tests/ios-infoplist-fix.test.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
