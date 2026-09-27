@@ -1,5 +1,5 @@
 import { ref, onMounted, onUnmounted } from 'vue'
-import { Application, Frame, Page, Utils, View } from '@nativescript/core'
+import { Application, Device, Frame, Page, Utils, View } from '@nativescript/core'
 
 export interface SafeAreaInsets {
   top: number
@@ -61,12 +61,61 @@ export interface SafeAreaInsets {
  * them to whichever page it just resolved, migrating off the previous one
  * first if a different page shows up later (covers real navigation to a
  * new page while this composable's the active one, not just first mount).
+ *
+ * Android needs a completely different measurement path. Confirmed by
+ * reading @nativescript/core directly: `getSafeAreaInsets()` (the method
+ * the iOS logic above relies on) is only ever overridden in
+ * `ui/core/view/index.ios.js` — the base `view-common.js` implementation
+ * every other platform falls back to just returns `{0,0,0,0}` unconditionally,
+ * there is no `index.android.js` override at all. Meanwhile
+ * `application.android.js` calls the native `enableEdgeToEdge(activity)`
+ * helper unconditionally on every activity, on every Android version this
+ * runtime supports — not an opt-in, no JS-level flag to disable it — so
+ * page content always draws under the status bar and the gesture/3-button
+ * navigation bar. With insets permanently zero, `NPage` never compensates,
+ * so the bottom of a page's content (e.g. a scaffolded template's last
+ * button) ends up rendered underneath the system navigation bar.
+ *
+ * Fixed by querying real Android window insets directly via Java interop
+ * on the page's own native view: `View#getRootWindowInsets()` (real
+ * platform API, `@since 23`, confirmed in `@nativescript/types-android`),
+ * then `WindowInsets#getInsets(WindowInsets.Type.systemBars())` (`@since
+ * 30`) for current devices, falling back to the older
+ * `getSystemWindowInset{Top,Bottom,Left,Right}()` accessors (deprecated in
+ * API 30 but still functional) on API 23-29. Below API 23 (pre-Marshmallow,
+ * long out of NativeScript's practical support window) this returns
+ * `undefined` and insets stay at `{0,0,0,0}` rather than throwing. The
+ * values these APIs return are already raw device pixels, exactly like
+ * iOS's `safeAreaInsets` — converted back to DIPs with the same
+ * `Utils.layout.toDeviceIndependentPixels()` used for iOS, which divides
+ * by the real per-platform density (`getDisplayMetrics().density` on
+ * Android, confirmed in `utils/layout-helper/index.android.js`), not a
+ * hardcoded scale factor.
  */
 const MAX_MEASURE_ATTEMPTS = 15
 const MEASURE_RETRY_DELAY_MS = 100
+const ANDROID_ROOT_INSETS_MIN_SDK = 23
+const ANDROID_INSETS_TYPE_MIN_SDK = 30
 
 function isZeroInsets(area: SafeAreaInsets): boolean {
   return area.top === 0 && area.bottom === 0 && area.left === 0 && area.right === 0
+}
+
+function getAndroidSystemBarInsets(page: Page): SafeAreaInsets | undefined {
+  if (android.os.Build.VERSION.SDK_INT < ANDROID_ROOT_INSETS_MIN_SDK) return undefined
+  const nativeView = page.android as android.view.View | undefined
+  const rootInsets = nativeView?.getRootWindowInsets()
+  if (!rootInsets) return undefined
+  if (android.os.Build.VERSION.SDK_INT >= ANDROID_INSETS_TYPE_MIN_SDK) {
+    const bars = rootInsets.getInsets(android.view.WindowInsets.Type.systemBars())
+    return { top: bars.top, bottom: bars.bottom, left: bars.left, right: bars.right }
+  }
+  return {
+    top: rootInsets.getSystemWindowInsetTop(),
+    bottom: rootInsets.getSystemWindowInsetBottom(),
+    left: rootInsets.getSystemWindowInsetLeft(),
+    right: rootInsets.getSystemWindowInsetRight()
+  }
 }
 
 export function useSafeArea() {
@@ -91,7 +140,7 @@ export function useSafeArea() {
   function measure() {
     const page = Frame.topmost()?.currentPage
     if (page) attachListeners(page)
-    const area = page?.getSafeAreaInsets()
+    const area = page && Device.os === 'Android' ? getAndroidSystemBarInsets(page) : page?.getSafeAreaInsets()
     if (area) {
       // getSafeAreaInsets() returns device pixels, not DIPs (confirmed:
       // ui/core/view/index.ios.js runs the real UIKit safeAreaInsets
