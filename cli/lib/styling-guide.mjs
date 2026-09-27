@@ -4,12 +4,18 @@ export function stylingGuide() {
 This is a native UI, not a browser. Use Tailwind v3 for supported static styles,
 component props for built-in variants, and numeric native styles for dynamic values.
 The framework bundles @nativescript/tailwind with compatibility for NativeScript 9
-gap, max-size, and text properties. Do not install a second adapter in this app.
+max-size and text properties. Do not install a second adapter in this app.
+
+\`gap\`/\`gap-*\` is disabled on purpose (not generated, not passed through) — confirmed
+on a real Android device that a non-zero row-gap on a \`<FlexboxLayout>\`/\`<NFlex>\`
+silently drops its last child from the native view tree entirely, a real bug in
+NativeScript's own compiled \`org.nativescript.widgets.FlexboxLayout\` widget. Use
+margin utilities on individual children for spacing between flex siblings instead.
 
 ## One spacing convention
 
 Tailwind rem lengths compile to device-independent pixels (DIPs): 1rem = 16 DIP.
-Use p-4 for 16 DIP of padding, gap-3 for 12 DIP between children, and p-5 for 20 DIP.
+Use p-4 for 16 DIP of padding, mb-3 for 12 DIP between children, and p-5 for 20 DIP.
 Numeric native styles use DIPs: :style="{ padding: 16 }" matches p-4.
 Native CSS px units are physical pixels, so prefer unitless numbers in custom CSS.
 Typed helpers use their own documented token scale; prefer numeric arguments when
@@ -20,8 +26,8 @@ Avoid em, viewport units, and browser layout expressions such as calc() for spac
 
 - NPage manages safe areas. Place one content layout inside it; add page padding there.
 - NFlex is a native FlexboxLayout. Set flex-col or flex-row explicitly.
-- Put gap-* on NFlex, not on a Label, Button, or StackLayout.
-- Let the parent gap space siblings; avoid adding child margins for the same space.
+- Space flex children with a margin utility (mb-4 in a column, mr-4 in a row) on every
+  child but the last — not gap-* (disabled, see above).
 - GridLayout uses rows/columns and row/col attributes. Unassigned children can overlap.
 - A ScrollView has one layout child. Avoid h-full/flex-1 to size the scrolling axis.
 - NButton size and NCard padding control their internal inline styles. Do not expect
@@ -33,9 +39,9 @@ Avoid em, viewport units, and browser layout expressions such as calc() for spac
 
 \`\`\`vue
 <NPage title="Example">
-  <NFlex class="flex-col p-5 gap-4">
-    <Label text="Hello" class="text-2xl font-bold" />
-    <Label text="Native spacing, familiar classes." textWrap="true" class="text-base" />
+  <NFlex class="flex-col p-5">
+    <Label text="Hello" class="text-2xl font-bold mb-4" />
+    <Label text="Native spacing, familiar classes." textWrap="true" class="text-base mb-4" />
     <NButton text="Continue" size="md" />
   </NFlex>
 </NPage>

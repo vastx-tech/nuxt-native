@@ -1,10 +1,11 @@
 <template>
   <NPage title="Product">
-    <NFlex v-if="product" class="flex-col p-5 gap-4">
-      <NText :text="product.name" variant="h2" weight="semibold" />
-      <NText :text="product.description" variant="body" color="#64748b" />
-      <NText :text="price" variant="h3" weight="semibold" />
-      <NButton text="Add to cart" @tap="cart.addItem(product)" />
+    <!-- gap-4 avoided on purpose — see index.vue's own comment on this. -->
+    <NFlex v-if="product" class="flex-col p-5">
+      <NText :text="product.name" variant="h2" weight="semibold" class="mb-4" />
+      <NText :text="product.description" variant="body" color="#64748b" class="mb-4" />
+      <NText :text="price" variant="h3" weight="semibold" class="mb-4" />
+      <NButton text="Add to cart" class="mb-4" @tap="cart.addItem(product)" />
       <NButton text="Back" variant="outline" @tap="back" />
     </NFlex>
     <NFlex v-else class="flex-col p-5">

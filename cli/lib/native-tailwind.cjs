@@ -3,8 +3,19 @@ const valueParser = require('postcss-value-parser')
 
 // NativeScript 9 supports these, but @nativescript/tailwind 4.0.10's
 // property filter omits them. Keep this exception list small and tested.
+//
+// gap/row-gap/column-gap were deliberately removed from this list (see
+// ARCHITECTURE.md's own row on this): confirmed on a real Android device
+// that a non-zero row-gap on a <FlexboxLayout> (<NFlex>) silently drops
+// its last child from the native view tree entirely — not a layout
+// glitch, a missing child, reproduced with row-gap alone (no column-gap
+// involved), regardless of which element was last. A real bug in
+// NativeScript's own compiled org.nativescript.widgets.FlexboxLayout
+// widget, not something fixable from this JS-level adapter. Letting
+// @nativescript/tailwind's own upstream filter strip `gap-*` back out to
+// a no-op is safer than a "supported" utility that can eat content.
 const preservedProperties = new Set([
-  'gap', 'row-gap', 'column-gap', 'max-width', 'max-height',
+  'max-width', 'max-height',
   'white-space', 'text-overflow'
 ])
 

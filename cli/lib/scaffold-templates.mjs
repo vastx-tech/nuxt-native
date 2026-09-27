@@ -247,6 +247,14 @@ hooks
 //  - space (space-x/space-y), ring, divide, backdropFilter: rely on
 //    sibling-combinator selectors or CSS features not confirmed to work
 //    against NativeScript's css-tree-based engine.
+//  - gap: confirmed on a real Android device that a non-zero row-gap on
+//    a <FlexboxLayout> (<NFlex>) silently drops its last child from the
+//    native view tree entirely (reproduced with row-gap alone, no
+//    column-gap involved) — a real bug in NativeScript's own compiled
+//    org.nativescript.widgets.FlexboxLayout widget, not something this
+//    adapter can fix. Worse than a no-op, so disabled outright rather
+//    than left as an exception in native-tailwind.cjs's property filter.
+//    Use margin utilities on individual children for spacing instead.
 //  - preflight: Tailwind's HTML/box-sizing reset — meaningless for views
 //    that were never HTML elements to begin with.
 // This controls generation, not runtime compatibility. The bundled
@@ -255,7 +263,6 @@ hooks
 const TAILWIND_CORE_PLUGINS = [
   'margin',
   'padding',
-  'gap',
   'width',
   'height',
   'minWidth',
@@ -349,11 +356,11 @@ export function appVue() {
 export function indexPage() {
   return `<template>
   <NPage title="Counter">
-    <NFlex class="flex-col p-5 gap-4">
-      <Label text="Welcome to Nuxt Native" class="text-2xl font-bold text-center" />
-      <Label text="Tap the buttons to change the count." class="text-base text-center" />
-      <Label :text="String(count)" class="text-5xl font-bold text-center" />
-      <NButton text="Increment +" size="lg" @tap="count++" />
+    <NFlex class="flex-col p-5">
+      <Label text="Welcome to Nuxt Native" class="text-2xl font-bold text-center mb-4" />
+      <Label text="Tap the buttons to change the count." class="text-base text-center mb-4" />
+      <Label :text="String(count)" class="text-5xl font-bold text-center mb-4" />
+      <NButton text="Increment +" size="lg" class="mb-4" @tap="count++" />
       <NButton text="Decrement -" variant="secondary" size="lg" @tap="count--" />
     </NFlex>
   </NPage>

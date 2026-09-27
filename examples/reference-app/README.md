@@ -82,7 +82,7 @@ which this app's `package.json` declares.
 
 ## Styling
 
-Tailwind utility classes (`flex-col`, `gap-4`, `p-5`, ...) work on
+Tailwind utility classes (`flex-col`, `mb-4`, `p-5`, ...) work on
 `<NFlex>` and other views — but only the utilities NativeScript's CSS
 engine can actually apply are enabled (`tailwind.config.cjs`'s
 `corePlugins` allowlist, generated for you, documents exactly which ones

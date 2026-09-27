@@ -61,7 +61,7 @@ tradeoff React Native and Flutter made, applied to the Nuxt/Vue ecosystem.
   doesn't start from `<StackLayout>` and inline styles every time.
 - **Tailwind, scoped to what NativeScript can actually render** — `create`
   wires up a real `tailwind.config.cjs`/`postcss.config.cjs`/`app.css`, so
-  `class="flex-col items-center gap-4 bg-indigo-600 rounded-lg p-3"` on an
+  `class="flex-col items-center bg-indigo-600 rounded-lg p-3"` on an
   `<NFlex>` or any UI kit component works the same way it would on web. See
   [UI kit](#ui-kit) below for what's in scope and why.
 - **Pinia, as a first-class citizen** — install `pinia` and `nuxt-native
@@ -257,9 +257,9 @@ since v4 dropped the JS-config `corePlugins` API this relies on.
 ```vue
 <template>
   <NPage title="Sign in">
-    <NFlex class="flex-col p-5 gap-4">
-      <NText text="Welcome back" variant="h1" align="center" />
-      <NFlex class="flex-row items-center justify-between gap-2 bg-slate-100 rounded-lg p-3">
+    <NFlex class="flex-col p-5">
+      <NText text="Welcome back" variant="h1" align="center" class="mb-4" />
+      <NFlex class="flex-row items-center justify-between bg-slate-100 rounded-lg p-3 mb-4">
         <NText text="Remember me" />
         <NSwitch v-model="remember" />
       </NFlex>
@@ -270,10 +270,15 @@ since v4 dropped the JS-config `corePlugins` API this relies on.
 ```
 
 `<NFlex>` is a bare `<FlexboxLayout>` wrapper — flex utility classes
-(`flex-row`/`flex-col`, `items-*`, `justify-*`, `gap-*`) only do anything on
-one of these, the same way flex utilities only do anything on a real flex
-container on web. **Not supported**: `grid-*` (NativeScript's grid is
-configured via `columns`/`rows` template strings, not CSS), `absolute`/
+(`flex-row`/`flex-col`, `items-*`, `justify-*`) only do anything on one of
+these, the same way flex utilities only do anything on a real flex
+container on web. **Not supported**: `gap-*` (confirmed on a real Android
+device that a non-zero row-gap on a `<FlexboxLayout>` silently drops its
+last child from the native view tree entirely — a real bug in
+NativeScript's own compiled `org.nativescript.widgets.FlexboxLayout`
+widget, disabled framework-wide rather than left as a trap; use a margin
+utility on every child but the last instead), `grid-*` (NativeScript's grid
+is configured via `columns`/`rows` template strings, not CSS), `absolute`/
 `inset-*`/`top-*` (no CSS `position` concept), and Tailwind's `rotate-*`/
 `scale-*`/`translate-*`/transform utilities (they compose via CSS custom
 properties NativeScript's transform parser doesn't resolve — use the native
@@ -304,7 +309,7 @@ renderer):
 
 ```vue
 <template>
-  <NFlex :style="[padding('lg'), bg('surface'), flex({ direction: 'column', gap: 'md' })]">
+  <NFlex :style="[padding('lg'), bg('surface'), flex({ direction: 'column' })]">
     <Label text="Total" :style="textStyle({ size: 'xl', weight: 'bold', color: 'primary' })" />
     <Label text="Card" :style="[border({ radius: 'md' }), box({ elevated: true })]" />
   </NFlex>
@@ -325,7 +330,7 @@ NativeScript unit; it has no root-font-size concept of its own.
 | `box({ radius, background, elevated, borderColor, borderWidth, opacity, clipPath })` | The common-case container look — single radius/border, optional shadow. NativeScript has no `overflow` property at all; `clipPath` (a real CSS `clip-path` shape string) is the only way to clip content |
 | `border({ width, color, radius, cornerShape })` | Per-side width/color, per-corner radius, `'round'`/`'squircle'` corners — reach for this over `box()` when sides need to differ |
 | `textStyle({ size, weight, color, align, family, style, decoration, transform, letterSpacing, lineHeight, whiteSpace, overflow, maxLines, shadow, stroke, variationSettings })` | Full text styling — `stroke: { width, color }` is real CSS `text-stroke`; `variationSettings` is a raw `font-variation-settings` string (variable-font axes), iOS-only |
-| `flex({ direction, wrap, justify, align, alignContent, gap, rowGap, columnGap, grow, shrink, alignSelf, order, wrapBefore })` | Flex container/item properties — **only takes effect on a real `<NFlex>`/`<FlexboxLayout>`**, same as flexbox only does anything on a flex container on web. `justify` genuinely doesn't support `'space-evenly'` — confirmed directly against NativeScript's flexbox implementation, not a Tailwind-only limitation. `wrapBefore` is a flex-item property that forces a wrap before that item |
+| `flex({ direction, wrap, justify, align, alignContent, gap, rowGap, columnGap, grow, shrink, alignSelf, order, wrapBefore })` | Flex container/item properties — **only takes effect on a real `<NFlex>`/`<FlexboxLayout>`**, same as flexbox only does anything on a flex container on web. `justify` genuinely doesn't support `'space-evenly'` — confirmed directly against NativeScript's flexbox implementation, not a Tailwind-only limitation. `wrapBefore` is a flex-item property that forces a wrap before that item. **Avoid `gap`/`rowGap`/`columnGap`** — confirmed on a real Android device that a non-zero row-gap silently drops a `<FlexboxLayout>`'s last child from the native view tree entirely (same underlying native property Tailwind's `gap-*` sets, which is disabled framework-wide for exactly this reason); use per-child margin for spacing instead |
 | `transform({ rotate, rotateX, rotateY, scaleX, scaleY, translateX, translateY, perspective })` | Real, literal-number transforms — works where Tailwind's `rotate-*`/`scale-*` utilities can't (they compose from CSS custom properties NativeScript's parser doesn't resolve) |
 | `align({ horizontal, vertical })` | A view's own position *within its parent* (`horizontalAlignment`/`verticalAlignment`) — a different concept from `flex`'s `align-items`, which positions children of a flex container |
 | `visible(value)` / `zIndex(value)` | `'visible' \| 'hidden' \| 'collapse'`; stacking order |
@@ -357,8 +362,8 @@ export const useCounterStore = defineStore('counter', () => {
 ```vue
 <template>
   <NPage title="Home">
-    <NFlex class="flex-col p-5 gap-4">
-      <NText :text="`Count: ${counter.count}`" />
+    <NFlex class="flex-col p-5">
+      <NText :text="`Count: ${counter.count}`" class="mb-4" />
       <NButton text="Increment" @tap="counter.increment" />
     </NFlex>
   </NPage>

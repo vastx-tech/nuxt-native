@@ -45,7 +45,7 @@ export async function ensureTailwindSetup(projectRoot) {
       writeFileSync(configPath, postcssConfig())
       console.log(`[nuxt-native] Upgraded generated PostCSS config (backup: ${backup})`)
     } else if (!source.includes('nuxt-native/cli/lib/native-tailwind.cjs')) {
-      console.warn(`[nuxt-native] Custom PostCSS config preserved: ${configPath}. Add require('nuxt-native/cli/lib/native-tailwind.cjs')() after Tailwind for native units and gaps. See STYLING.md.`)
+      console.warn(`[nuxt-native] Custom PostCSS config preserved: ${configPath}. Add require('nuxt-native/cli/lib/native-tailwind.cjs')() after Tailwind for native units. See STYLING.md.`)
     }
   }
 }

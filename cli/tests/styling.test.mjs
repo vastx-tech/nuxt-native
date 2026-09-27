@@ -33,13 +33,10 @@ function declarations(result, selector) {
   return values
 }
 
-test('Tailwind spacing, gaps, typography, colors and max sizes compile to native values', async () => {
+test('Tailwind spacing, typography, colors and max sizes compile to native values, gap is excluded entirely', async () => {
   const result = await compile('p-4 m-2 gap-4 gap-x-2 gap-y-3 text-base rounded-lg max-w-sm max-h-16 text-indigo-600 bg-slate-100 flex-col')
   assert.equal(declarations(result, '.p-4').padding, '16')
   assert.equal(declarations(result, '.m-2').margin, '8')
-  assert.equal(declarations(result, '.gap-4').gap, '16')
-  assert.equal(declarations(result, '.gap-x-2')['column-gap'], '8')
-  assert.equal(declarations(result, '.gap-y-3')['row-gap'], '12')
   assert.equal(declarations(result, '.text-base')['font-size'], '16')
   assert.equal(declarations(result, '.rounded-lg')['border-radius'], '8')
   assert.equal(declarations(result, '.max-w-sm')['max-width'], '384')
@@ -48,12 +45,17 @@ test('Tailwind spacing, gaps, typography, colors and max sizes compile to native
   assert.equal(declarations(result, '.bg-slate-100')['background-color'], '#f1f5f9')
   assert.equal(declarations(result, '.flex-col')['flex-direction'], 'column')
   assert.doesNotMatch(result.css, /\drem\b|--nuxt-native-preserve/)
+  // gap/gap-x/gap-y are disabled outright (removed from TAILWIND_CORE_PLUGINS),
+  // not just filtered post-generation — confirmed on a real Android device that
+  // a non-zero row-gap silently drops a <FlexboxLayout>'s last child from the
+  // native view tree entirely (see ARCHITECTURE.md).
+  assert.doesNotMatch(result.css, /\.gap-/)
 })
 
-test('native adapter handles arbitrary and negative rem lengths without rescaling px or percentages', async () => {
+test('native adapter handles arbitrary and negative rem lengths without rescaling px or percentages, and drops gap from raw custom CSS too', async () => {
   const result = await compile('', '.custom { padding: 12.5rem; margin: -0.5rem; gap: 1rem 0.5rem; width: 50%; height: 24px; white-space: normal; text-overflow: ellipsis; display: grid; }')
   assert.deepEqual(declarations(result, '.custom'), {
-    padding: '200', margin: '-8', gap: '16 8', width: '50%', height: '24px',
+    padding: '200', margin: '-8', width: '50%', height: '24px',
     'white-space': 'normal', 'text-overflow': 'ellipsis'
   })
   const again = await postcss([nativeTailwind()]).process(result.css, { from: undefined })
@@ -63,9 +65,9 @@ test('native adapter handles arbitrary and negative rem lengths without rescalin
 test('counter starter emits usable native spacing and excludes browser-only utilities', async () => {
   const result = await compile(`${indexPage()} grid absolute ring-2 hover:p-8`)
   assert.equal(declarations(result, '.p-5').padding, '20')
-  assert.equal(declarations(result, '.gap-4').gap, '16')
+  assert.equal(declarations(result, '.mb-4')['margin-bottom'], '16')
   assert.equal(declarations(result, '.text-5xl')['font-size'], '48')
-  assert.doesNotMatch(result.css, /display:|position:|:hover|--tw-ring/)
+  assert.doesNotMatch(result.css, /display:|position:|:hover|--tw-ring|\.gap-/)
 })
 
 function fixture(t) {
@@ -88,7 +90,7 @@ test('fresh setup loads the generated PostCSS config and is idempotent', async (
   const plugins = createRequire(join(dir, 'package.json'))('./postcss.config.cjs').plugins
   const result = await postcss(plugins).process('.example { padding: 1rem; gap: 1rem; }', { from: join(dir, 'app/app.css') })
   assert.equal(declarations(result, '.example').padding, '16')
-  assert.equal(declarations(result, '.example').gap, '16')
+  assert.equal(declarations(result, '.example').gap, undefined)
   assert.ok(existsSync(join(dir, 'STYLING.md')))
   assert.ok(existsSync(join(dir, 'AGENTS.md')))
   await ensureTailwindSetup(dir)

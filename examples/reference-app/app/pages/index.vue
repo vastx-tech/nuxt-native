@@ -8,13 +8,17 @@
        defeats recycling entirely (only ever renders a fixed few
        screen-fuls of cells if given a real bounded height instead). -->
   <NPage title="Shop" :scrollable="false">
-    <NFlex class="flex-col p-5 gap-4" style="height: 100%">
-      <SectionHeader title="Featured gear" :subtitle="`${products.length} items`" />
+    <!-- gap-4 avoided on purpose: a real Android bug (see ARCHITECTURE.md,
+         `gap`/`row-gap` is disabled framework-wide) drops a flex
+         container's last child entirely when a non-zero row-gap is set —
+         margin on every child but the last gets the same spacing safely. -->
+    <NFlex class="flex-col p-5" style="height: 100%">
+      <SectionHeader title="Featured gear" :subtitle="`${products.length} items`" class="mb-4" />
 
       <!-- flexGrow: 1 gives the list the header/button's leftover space
            in this flex column — the same real flex-item property
            flex()'s own `grow` option sets, just written inline here. -->
-      <ListView :items="products" style="flexGrow: 1">
+      <ListView :items="products" style="flexGrow: 1" class="mb-4">
         <template #default="{ item }">
           <ProductCard
             :product="item"

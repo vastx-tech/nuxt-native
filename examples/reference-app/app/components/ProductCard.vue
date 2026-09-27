@@ -1,6 +1,8 @@
 <template>
   <NCard padding="md">
-    <NFlex class="flex-col gap-2">
+    <!-- gap-* avoided throughout on purpose (see index.vue's own comment)
+         — margin on every child but the last instead. -->
+    <NFlex class="flex-col">
       <!-- @tap lives on this inner wrapper, not the NCard, and the
            NButton below is a sibling to it, not a descendant — nesting a
            tappable NButton inside an @tap-bearing ancestor was confirmed
@@ -9,9 +11,9 @@
            ancestor's own separately-registered listener the way DOM
            events do), so "Add to cart" was also silently navigating away.
            Keeping the tap targets siblings avoids that entirely. -->
-      <NFlex class="flex-col gap-2" @tap="$emit('tap')">
-        <NText :text="product.name" variant="h3" weight="semibold" />
-        <NText :text="product.description" variant="caption" color="#64748b" />
+      <NFlex class="flex-col mb-2" @tap="$emit('tap')">
+        <NText :text="product.name" variant="h3" weight="semibold" class="mb-2" />
+        <NText :text="product.description" variant="caption" color="#64748b" class="mb-2" />
         <NText :text="price" variant="body" weight="semibold" />
       </NFlex>
       <NButton text="Add to cart" size="sm" @tap="$emit('add')" />

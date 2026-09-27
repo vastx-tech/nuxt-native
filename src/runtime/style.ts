@@ -404,6 +404,7 @@ export interface FlexInput {
   justify?: 'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around'
   align?: 'flex-start' | 'flex-end' | 'center' | 'baseline' | 'stretch'
   alignContent?: 'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around' | 'stretch'
+  /** Confirmed broken on Android: a non-zero row-gap silently drops a <FlexboxLayout>'s last child from the native view tree entirely (a real bug in NativeScript's own compiled org.nativescript.widgets.FlexboxLayout, not this framework's translation of it — the same reason Tailwind's gap-* is disabled framework-wide). Use per-child margin for spacing instead. */
   gap?: Length
   rowGap?: Length
   columnGap?: Length
