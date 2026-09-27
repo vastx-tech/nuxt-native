@@ -1,29 +1,33 @@
 # Nuxt Native
 
-Build real native Android apps with Nuxt and Vue — no WebView, no DOM (iOS
-support exists and is written against Apple's documented APIs throughout,
-but is still experimental — see the status note below). Vue components
-render as actual native views (`UIView` / `android.view.View`), the same
-way React Native components render as real native views instead of HTML.
-Nuxt Native brings Nuxt's developer experience — file-based pages,
-auto-imported composables/components/style helpers, a single module
-system — to that model, built on
+Build real native Android and iOS apps with Nuxt and Vue — no WebView, no
+DOM. Vue components render as actual native views (`UIView` /
+`android.view.View`), the same way React Native components render as real
+native views instead of HTML. Nuxt Native brings Nuxt's developer
+experience — file-based pages, auto-imported composables/components/style
+helpers, a single module system — to that model, built on
 [NativeScript](https://nativescript.org)'s native runtime rather than
 reinventing one from scratch.
 
-> **Status: early / pre-alpha. Android is verified on real hardware; iOS
-> is experimental.** The `create` command has taken a project from an
-> empty folder to a rendering Android app on physical hardware, repeatedly
-> — the module, composables, the typed style-object system, the UI kit,
+> **Status: early / pre-alpha. Both platforms are now verified on real
+> hardware.** The `create` command has taken a project from an empty
+> folder to a rendering app on physical Android hardware, repeatedly — the
+> module, composables, the typed style-object system, the UI kit,
 > auto-imports (composables/utils reach the real on-device bundle, not
 > just the editor), the CLI (release signing, a doctor command, a bundle
 > analyzer), and the native build pipeline it hands off to all work
-> together end to end, confirmed on-device. iOS code paths are written
-> against Apple's real, documented APIs and reviewed the same way, but
-> have never been compiled or run — no Xcode/macOS access anywhere in
-> this project's development so far. See [ARCHITECTURE.md](./ARCHITECTURE.md)
-> for exactly what's confirmed vs. still the frontier — iOS verification
-> is where contributors are most needed.
+> together end to end, confirmed on-device. iOS verification started more
+> recently, on a real physical device (no simulator): install, launch,
+> full-screen rendering, safe-area layout, and tap/gesture responsiveness
+> are all confirmed working after fixing several real bugs surfaced along
+> the way (a broken `Info.plist` scaffold, a missing launch-screen
+> reference, an async navigation-timing race, a unit-conversion bug) — see
+> [ARCHITECTURE.md](./ARCHITECTURE.md) for the full trail. Not every iOS
+> code path has been exercised yet this way (`useWebSocket()`'s iOS half
+> is still unverified, for instance — see its own section below); treat
+> "confirmed" claims in this README and ARCHITECTURE.md as the precise
+> boundary of what's actually been run on a device, not a blanket
+> per-platform guarantee.
 
 ## Why not Capacitor / a WebView?
 
@@ -476,9 +480,12 @@ fixed with a debug-only network security config permitting cleartext to
 automatically, same as the OkHttp dependency — see `ARCHITECTURE.md` for
 the full detail). Production apps should use `wss://` regardless; the
 cleartext exception only applies to debug builds. The iOS implementation
-is unverified in the same way every other iOS code path in this framework
-is (no Xcode/macOS access at all) — a real, best-effort implementation
-against Apple's documented API, not a stub, but not compiled or run.
+is a real, best-effort implementation against Apple's documented
+`NSURLSessionWebSocketTask` API, reviewed the same way the Android one
+was, but not yet compiled or run on a device — unlike the iOS work
+covered in [ARCHITECTURE.md](./ARCHITECTURE.md) (install/launch/layout/
+gestures), this specific composable hasn't been part of a real-device
+pass yet.
 
 ## Third-party backends (Supabase)
 
