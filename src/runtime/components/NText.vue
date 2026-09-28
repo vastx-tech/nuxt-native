@@ -1,5 +1,5 @@
 <template>
-  <Label :text="text" :style="labelStyle" :text-wrap="wrap" />
+  <Label :text="text" :style="labelStyle" :textWrap="wrap" />
 </template>
 
 <script setup lang="ts">

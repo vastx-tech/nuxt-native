@@ -6,7 +6,7 @@
       :hint="placeholder"
       :secure="secure"
       :editable="!disabled"
-      :max-length="maxLength"
+      :maxLength="maxLength"
       :style="fieldStyle"
       @text-change="onTextChange"
     />

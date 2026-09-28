@@ -10,7 +10,7 @@
 -->
 <template>
   <GridLayout rows="*" columns="*" style="width: 100%; height: 100%; backgroundColor: rgba(15, 23, 42, 0.5);" @tap="dismiss">
-    <StackLayout vertical-alignment="bottom" :style="sheetStyle" @tap="() => {}">
+    <StackLayout verticalAlignment="bottom" :style="sheetStyle" @tap="() => {}">
       <component :is="content" v-bind="contentProps" />
     </StackLayout>
   </GridLayout>

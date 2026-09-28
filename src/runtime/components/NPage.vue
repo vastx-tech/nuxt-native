@@ -1,6 +1,6 @@
 <template>
-  <Page :action-bar-hidden="!title && !$slots.actionBar">
-    <NActionBar v-if="title || $slots.actionBar" :title="title">
+  <Page :actionBarHidden="actionBarHidden">
+    <NActionBar v-if="!actionBarHidden" :title="title">
       <slot name="actionBar" />
     </NActionBar>
     <!-- ios-content-inset-adjustment-behavior="automatic": NativeScript's
@@ -14,7 +14,7 @@
          one manual padding source isn't compounded by a second, internal
          one. A no-op on Android (this property's affectsLayout is
          Apple-only in the source). -->
-    <ScrollView v-if="scrollable" orientation="vertical" ios-content-inset-adjustment-behavior="automatic">
+    <ScrollView v-if="scrollable" orientation="vertical" iosContentInsetAdjustmentBehavior="automatic">
       <GridLayout :style="contentStyle">
         <slot />
       </GridLayout>
@@ -26,13 +26,26 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, useSlots } from 'vue'
 import { useSafeArea } from '../composables/useSafeArea'
 import NActionBar from './NActionBar.vue'
 
-withDefaults(defineProps<{ title?: string, scrollable?: boolean }>(), {
+const props = withDefaults(defineProps<{ title?: string, scrollable?: boolean, hideActionBar?: boolean }>(), {
   scrollable: true
 })
+
+const slots = useSlots()
+
+/**
+ * `hideActionBar` is an explicit override; when omitted, visibility is
+ * inferred from whether a title or actionBar slot was actually passed —
+ * unchanged default behavior. Reported by a real app that builds its own
+ * in-content header on every page (no title, no actionBar slot anywhere)
+ * as still seeing a native ActionBar/Toolbar on-device: this explicit
+ * prop removes any ambiguity for that exact case, rather than relying on
+ * inferred intent from title/slot presence.
+ */
+const actionBarHidden = computed(() => props.hideActionBar ?? (!props.title && !slots.actionBar))
 
 const insets = useSafeArea()
 const contentStyle = computed(() => ({

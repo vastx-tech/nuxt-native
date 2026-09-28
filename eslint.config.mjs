@@ -32,6 +32,26 @@ export default createConfigForNuxt({
     '@typescript-eslint/no-explicit-any': 'off'
   }
 }).append({
+  // nativescript-vue's own renderer does NOT camelize kebab-case template
+  // attributes for native (non-SFC) elements the way Vue's DOM renderer
+  // does for real HTML — confirmed directly in its dist/dom/index.js and
+  // dist/renderer/patchProp.js: a template attribute name is passed
+  // completely literally into the npm `set-value` package against the
+  // native view, with no hyphenate/camelize step anywhere in that path.
+  // `:action-bar-hidden="x"` on a native `<Page>` therefore assigns a
+  // literal `nativeView['action-bar-hidden']` — a property nothing reads
+  // — instead of `nativeView.actionBarHidden`, silently no-opping. This
+  // is exactly backwards from `vue/attribute-hyphenation`'s own default
+  // (kebab-case preferred, matching real DOM/HTML conventions), which
+  // would have auto-"fixed" every genuine bugfix in this exact class back
+  // into the same bug. Every `.vue` file in this repo targets
+  // nativescript-vue's renderer, never a DOM one, so this flips the rule
+  // to require camelCase everywhere instead.
+  files: ['**/*.vue'],
+  rules: {
+    'vue/attribute-hyphenation': ['error', 'never']
+  }
+}).append({
   // Ambient .d.ts files describe shape only — `class` with only static
   // members or an empty body is exactly how you declare a native class's
   // type surface without a runtime implementation, unlike the rule's

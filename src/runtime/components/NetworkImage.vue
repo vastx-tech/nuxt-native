@@ -3,10 +3,10 @@
     <Image
       :src="src"
       :stretch="stretch"
-      load-mode="async"
-      :use-cache="useCache"
-      :decode-width="decodeWidth"
-      :decode-height="decodeHeight"
+      loadMode="async"
+      :useCache="useCache"
+      :decodeWidth="decodeWidth"
+      :decodeHeight="decodeHeight"
       :style="imageStyle"
       @is-loading-change="onIsLoadingChange"
     />

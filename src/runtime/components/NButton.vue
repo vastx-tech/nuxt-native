@@ -13,11 +13,11 @@
     rows="auto"
     columns="auto"
     :style="containerStyle"
-    :is-enabled="!disabled && !loading"
+    :isEnabled="!disabled && !loading"
     @tap="onTap"
   >
     <ActivityIndicator v-if="loading" busy="true" :color="palette.text" width="20" height="20" />
-    <Label v-else :text="text" :style="labelStyle" text-wrap="false" />
+    <Label v-else :text="text" :style="labelStyle" textWrap="false" />
   </GridLayout>
 </template>
 

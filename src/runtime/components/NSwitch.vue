@@ -1,9 +1,9 @@
 <template>
   <Switch
     :checked="modelValue"
-    :is-enabled="!disabled"
+    :isEnabled="!disabled"
     :color="color"
-    :off-background-color="offColor"
+    :offBackgroundColor="offColor"
     @checked-change="onCheckedChange"
   />
 </template>

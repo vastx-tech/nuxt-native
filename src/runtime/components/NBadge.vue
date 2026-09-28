@@ -1,6 +1,6 @@
 <template>
   <StackLayout :style="badgeStyle">
-    <Label :text="text" :style="labelStyle" text-wrap="false" />
+    <Label :text="text" :style="labelStyle" textWrap="false" />
   </StackLayout>
 </template>
 
