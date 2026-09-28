@@ -177,8 +177,11 @@ function renderAppEntry({ usePinia } = {}) {
   const piniaUse = usePinia ? '  .use(createPinia())\n' : ''
 
   return `import { createApp } from 'nativescript-vue'
+import { applyLabelClippingFix } from 'nuxt-native/runtime/label-clipping-fix.js'
 ${piniaImport}import RootFrame from './root-frame.vue'
 ${imports}
+
+applyLabelClippingFix()
 
 createApp(RootFrame)
 ${piniaUse}${registrations}
