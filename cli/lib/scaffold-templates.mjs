@@ -355,14 +355,30 @@ export function appVue() {
 
 export function indexPage() {
   return `<template>
-  <NPage title="Counter">
-    <NFlex class="flex-col p-5">
-      <Label text="Welcome to Nuxt Native" class="text-2xl font-bold text-center mb-4" />
-      <Label text="Tap the buttons to change the count." class="text-base text-center mb-4" />
-      <Label :text="String(count)" class="text-5xl font-bold text-center mb-4" />
-      <NButton text="Increment +" size="lg" class="mb-4" @tap="count++" />
-      <NButton text="Decrement -" variant="secondary" size="lg" @tap="count--" />
-    </NFlex>
+  <NPage title="Counter" :scrollable="false">
+    <GridLayout rows="*" columns="*">
+      <NFlex class="flex-col items-center justify-center p-5">
+        <NText text="Welcome to Nuxt Native" class="text-2xl font-bold text-center mb-4" />
+        <NText text="Tap the buttons to change the count." class="text-base text-center mb-4" />
+        <NText :text="String(count)" class="text-5xl font-bold text-center" />
+      </NFlex>
+
+      <!-- FAB stack: GridLayout lets children share a cell and stack on
+           top of each other (later ones drawn on top) — NativeScript has
+           no CSS position:fixed, so overlaying a FAB over scrollable/
+           centered content means sharing this cell on purpose, not
+           assigning row/col. horizontalAlignment/verticalAlignment then
+           pin the stack to a corner instead of stretching to fill it. -->
+      <NFlex
+        class="flex-col items-center"
+        horizontalAlignment="right"
+        verticalAlignment="bottom"
+        :style="{ margin: 24 }"
+      >
+        <NButton text="+" class="mb-3" :style="fabStyle" @tap="count++" />
+        <NButton text="−" variant="secondary" :style="fabStyle" @tap="count--" />
+      </NFlex>
+    </GridLayout>
   </NPage>
 </template>
 
@@ -370,6 +386,11 @@ export function indexPage() {
 import { ref } from 'vue'
 
 const count = ref(0)
+
+// A circular FAB: NButton's own size prop only controls internal
+// padding/font size, so a fixed width/height plus a radius of half that
+// turns it into a real circle instead of a pill.
+const fabStyle = { width: 56, height: 56, borderRadius: 28, padding: 0 }
 </script>
 `
 }
