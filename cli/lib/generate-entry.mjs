@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module'
-import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { scanPages } from './scan-pages.mjs'
 import { collectAutoImportEntries, renderAutoImportTypes } from './auto-imports.mjs'
@@ -42,7 +42,9 @@ export function generateEntry({ projectRoot = process.cwd(), pagesDir = 'app/pag
   mkdirSync(outDir, { recursive: true })
   writeFileSync(join(outDir, 'route-manifest.mjs'), renderManifest(routes))
   writeFileSync(join(outDir, 'root-frame.vue'), renderRootFrame(initial))
-  writeFileSync(join(outDir, 'app.js'), renderAppEntry({ usePinia: isPiniaInstalled(projectRoot) }))
+  const components = collectUsedComponents(join(projectRoot, 'app'))
+  const needsSvg = components.some(({ tag }) => tag === 'NSvg' || tag === 'NIconButton')
+  writeFileSync(join(outDir, 'app.js'), renderAppEntry({ components, usePinia: isPiniaInstalled(projectRoot), useUiSvg: needsSvg && isUiSvgInstalled(projectRoot) }))
 
   // @nativescript/webpack's app-css-loader resolves "./app.css" relative to
   // the entry file's own directory (confirmed against its source) — i.e.
@@ -120,12 +122,46 @@ const RUNTIME_COMPONENTS = [
   { tag: 'NContainer', specifier: 'nuxt-native/runtime/components/NContainer.vue' },
   { tag: 'NetworkImage', specifier: 'nuxt-native/runtime/components/NetworkImage.vue' },
   { tag: 'CachedImage', specifier: 'nuxt-native/runtime/components/CachedImage.vue' },
-  { tag: 'NSkeleton', specifier: 'nuxt-native/runtime/components/NSkeleton.vue' }
+  { tag: 'NSkeleton', specifier: 'nuxt-native/runtime/components/NSkeleton.vue' },
+  // NSvg/NIconButton are available for selective registration too — they compile fine
+  // without @nativescript-community/ui-svg installed, since their own
+  // templates only reference the <SVGView> tag name as a string, resolved
+  // at runtime through nativescript-vue's element registry (see
+  // isUiSvgInstalled() below). Only that registry entry is conditional.
+  { tag: 'NSvg', specifier: 'nuxt-native/runtime/components/NSvg.vue' },
+  { tag: 'NIconButton', specifier: 'nuxt-native/runtime/components/NIconButton.vue' }
   // NBottomSheet deliberately excluded: it's shown imperatively via
   // useBottomSheet()'s $showModal call (which references it by direct JS
   // import, not by template tag name), never used as a template tag
   // itself, so it needs no global registration here.
 ]
+
+/** Scan project templates; a dynamic component may select any registered tag. */
+export function collectUsedComponents(appDir) {
+  const used = new Set()
+  let dynamic = false
+  function visit(dir) {
+    if (!existsSync(dir)) return
+    for (const item of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, item.name)
+      if (item.isDirectory()) visit(path)
+      else if (item.name.endsWith('.vue')) {
+        const source = readFileSync(path, 'utf8')
+        const clean = source
+          .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+          .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
+          .replace(/<!--[\s\S]*?-->/g, '')
+        if (/<component\b/i.test(clean)) dynamic = true
+        for (const match of clean.matchAll(/<([a-z][\w-]*)\b/gi)) {
+          const tag = match[1].replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())
+          used.add(tag[0].toUpperCase() + tag.slice(1))
+        }
+      }
+    }
+  }
+  visit(appDir)
+  return dynamic ? RUNTIME_COMPONENTS : RUNTIME_COMPONENTS.filter(({ tag }) => used.has(tag))
+}
 
 /**
  * Optional, first-class Pinia support: wired into the bootstrap only if
@@ -165,26 +201,57 @@ function isPiniaInstalled(projectRoot) {
   }
 }
 
-function renderAppEntry({ usePinia } = {}) {
-  const imports = RUNTIME_COMPONENTS
+/**
+ * NSvg/NIconButton (see their own files) compile fine without
+ * @nativescript-community/ui-svg installed — their templates only
+ * reference the <SVGView> tag name as a string. But using them at
+ * runtime needs that tag actually registered against the real SVGView
+ * class first (registerElement(), the same real nativescript-vue API
+ * every built-in native element — GridLayout, ScrollView, ... — is
+ * registered with, confirmed directly in its own elements.js), which
+ * does need a real import. Optional and detected the same way Pinia is:
+ * only emitted if the consuming app actually depends on it, so apps that
+ * never touch NSvg/NIconButton don't carry a native SVG-rendering
+ * dependency they never asked for.
+ */
+function isUiSvgInstalled(projectRoot) {
+  try {
+    createRequire(join(projectRoot, 'package.json')).resolve('@nativescript-community/ui-svg')
+    return true
+  } catch {
+    return false
+  }
+}
+
+function renderAppEntry({ components = RUNTIME_COMPONENTS, usePinia, useUiSvg } = {}) {
+  const imports = components
     .map(({ tag, specifier }) => `import ${tag} from ${JSON.stringify(specifier)}`)
     .join('\n')
-  const registrations = RUNTIME_COMPONENTS
+  const registrations = components
     .map(({ tag }) => `  .component(${JSON.stringify(tag)}, ${tag})`)
     .join('\n')
 
   const piniaImport = usePinia ? `import { createPinia } from 'pinia'\n` : ''
   const piniaUse = usePinia ? '  .use(createPinia())\n' : ''
 
+  const uiSvgImport = useUiSvg ? `import { SVGView } from '@nativescript-community/ui-svg'\n` : ''
+  // app.registerElement(...) — confirmed a real chainable method on the
+  // created app (App.registerElement: typeof registerElement in
+  // nativescript-vue's own index.d.ts, alongside the standalone
+  // registerElement export this uses the same way), so this fits
+  // straight into the existing .component()/.use() chain below instead
+  // of a separate standalone call.
+  const uiSvgRegister = useUiSvg ? `  .registerElement('SVGView', () => SVGView)\n` : ''
+
   return `import { createApp } from 'nativescript-vue'
 import { applyLabelClippingFix } from 'nuxt-native/runtime/label-clipping-fix.js'
-${piniaImport}import RootFrame from './root-frame.vue'
+${piniaImport}${uiSvgImport}import RootFrame from './root-frame.vue'
 ${imports}
 
 applyLabelClippingFix()
 
 createApp(RootFrame)
-${piniaUse}${registrations}
+${piniaUse}${uiSvgRegister}${registrations}
   .start()
 `
 }

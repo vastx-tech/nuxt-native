@@ -4,7 +4,7 @@ import { ENTRY_FILE } from './generate-entry.mjs'
 // straight from GitHub. Once it's published, this is the one line to change.
 export const NUXT_NATIVE_DEPENDENCY_SPEC = 'github:vastx-tech/nuxt-native'
 
-export function packageJson(appName, dependencySpec = NUXT_NATIVE_DEPENDENCY_SPEC) {
+export function packageJson(appName, dependencySpec = NUXT_NATIVE_DEPENDENCY_SPEC, styling = 'native') {
   return `${JSON.stringify(
     {
       name: appName,
@@ -59,8 +59,7 @@ export function packageJson(appName, dependencySpec = NUXT_NATIVE_DEPENDENCY_SPE
         // dropped it. See tailwind.config.cjs's own comment for why that
         // allowlist (not the full utility set) is what's actually safe to
         // generate against NativeScript's CSS engine.
-        tailwindcss: '^3.4.19',
-        postcss: '^8.5.28'
+        ...(styling === 'tailwind' ? { tailwindcss: '^3.4.19', postcss: '^8.5.28' } : {})
       }
     },
     null,
@@ -68,17 +67,20 @@ export function packageJson(appName, dependencySpec = NUXT_NATIVE_DEPENDENCY_SPE
   )}\n`
 }
 
-export function projectReadme() {
+export function projectReadme(styling = 'native') {
   return `# Nuxt Native app
 
 Run on Android with \`npx nuxt-native dev android\` (or use \`ios\` on macOS).
 
-Read [STYLING.md](./STYLING.md) before changing layout or spacing. The framework
-uses Tailwind v3 with its bundled @nativescript/tailwind adapter.
+${styling === 'tailwind' ? 'This project uses Tailwind v3 with the NativeScript adapter. Read STYLING.md before changing layout or spacing.' : 'This project uses native style objects. Add app/app.css for shared NativeScript CSS, or choose --styling tailwind when creating a project.'}
 
 ## AI coding agents (MCP)
 
-The framework includes an MCP server. No separate clone or server folder is needed.
+The framework includes an optional MCP server. Install its dependencies first:
+
+\`npm install -D @modelcontextprotocol/sdk zod\`
+
+No separate clone or server folder is needed.
 Configure your agent to launch \`npx nuxt-native mcp\` from this project directory.
 The agent starts and stops the server; you do not need to run it in another terminal.
 It uses stdio, so a manual launch waits for MCP messages rather than opening a web page.
@@ -114,14 +116,15 @@ This development server is separate from the app's useMcpClient() HTTP client.
 `
 }
 
-export function nuxtConfig(appId, appName) {
+export function nuxtConfig(appId, appName, styling = 'native') {
   return `export default defineNuxtConfig({
   modules: ['nuxt-native'],
   compatibilityDate: '${new Date().toISOString().slice(0, 10)}',
 
   native: {
     appId: ${JSON.stringify(appId)},
-    appName: ${JSON.stringify(appName)}
+    appName: ${JSON.stringify(appName)},
+    styling: ${JSON.stringify(styling)}
   }
 })
 `
@@ -350,6 +353,29 @@ export function appVue() {
        a root component to resolve. -->
   <div />
 </template>
+`
+}
+
+export function nativeIndexPage() {
+  return `<template>
+  <NPage title="Counter" :scrollable="false">
+    <GridLayout rows="*" columns="*">
+      <StackLayout verticalAlignment="center" horizontalAlignment="center">
+        <NText text="Welcome to Nuxt Native" :style="{ fontSize: 24, fontWeight: 'bold', textAlignment: 'center', marginBottom: 16 }" />
+        <NText :text="String(count)" :style="{ fontSize: 40, textAlignment: 'center', marginBottom: 16 }" />
+        <GridLayout columns="*, *" :style="{ marginLeft: 24, marginRight: 24 }">
+          <NButton col="0" text="−" variant="secondary" @tap="count--" />
+          <NButton col="1" text="+" @tap="count++" />
+        </GridLayout>
+      </StackLayout>
+    </GridLayout>
+  </NPage>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+const count = ref(0)
+</script>
 `
 }
 

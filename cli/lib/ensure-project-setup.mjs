@@ -6,6 +6,7 @@ import { ensureWebSocketDependency } from './websocket-setup.mjs'
 import { ensureNetworkSecurityConfig } from './network-security-setup.mjs'
 import { ensureIosInfoPlistKeys } from './ios-infoplist-fix.mjs'
 import { runPluginSetup } from './plugins.mjs'
+import { existsSync, readFileSync } from 'node:fs'
 
 /**
  * Every idempotent native-project patch this framework needs, run on
@@ -20,8 +21,16 @@ import { runPluginSetup } from './plugins.mjs'
  * instead of only once.
  */
 export async function ensureProjectSetup(projectRoot, config, platforms) {
-  await ensureTailwindSetup(projectRoot)
-  console.log('[nuxt-native] Tailwind config ready (tailwind.config.cjs/postcss.config.cjs/app/app.css)')
+  const styling = config.styling ?? 'auto'
+  const packagePath = join(projectRoot, 'package.json')
+  const packageJson = existsSync(packagePath) ? JSON.parse(readFileSync(packagePath, 'utf8')) : {}
+  const hasTailwind = existsSync(join(projectRoot, 'tailwind.config.cjs'))
+    || existsSync(join(projectRoot, 'tailwind.config.js'))
+    || Boolean(packageJson.devDependencies?.tailwindcss || packageJson.dependencies?.tailwindcss)
+  if (styling === 'tailwind' || (styling === 'auto' && hasTailwind)) {
+    await ensureTailwindSetup(projectRoot)
+    console.log('[nuxt-native] Tailwind config ready (tailwind.config.cjs/postcss.config.cjs/app/app.css)')
+  }
 
   if (platforms.includes('android')) {
     ensureGradleMemorySettings(join(projectRoot, 'platforms'), platforms)

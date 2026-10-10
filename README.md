@@ -61,8 +61,8 @@ tradeoff React Native and Flutter made, applied to the Nuxt/Vue ecosystem.
   `useBottomSheet()`, `useModal()`) — themeable, sensibly-defaulted
   components on top of the primitives above, so building a real screen
   doesn't start from `<StackLayout>` and inline styles every time.
-- **Tailwind, scoped to what NativeScript can actually render** — `create`
-  wires up a real `tailwind.config.cjs`/`postcss.config.cjs`/`app.css`, so
+- **Optional Tailwind, scoped to what NativeScript can actually render** —
+  `create --styling tailwind` wires up a real `tailwind.config.cjs`/`postcss.config.cjs`/`app.css`, so
   `class="flex-col items-center bg-indigo-600 rounded-lg p-3"` on an
   `<NFlex>` or any UI kit component works the same way it would on web. See
   [UI kit](#ui-kit) below for what's in scope and why.
@@ -230,7 +230,10 @@ real `$showModal` — your content component can dismiss itself by importing
 
 ### Tailwind
 
-Nuxt Native uses **Tailwind v3 + the bundled `@nativescript/tailwind` adapter**.
+New projects use native style objects by default. Choose `--styling tailwind`
+with `nuxt-native create` to enable **Tailwind v3 + the bundled
+`@nativescript/tailwind` adapter**. Existing Tailwind projects continue to use
+their current setup.
 The generated PostCSS config runs the framework's compatibility wrapper after
 Tailwind. It converts `1rem` to `16` native DIPs and preserves NativeScript 9
 gaps, max dimensions, and text properties omitted by the upstream filter.
@@ -673,7 +676,7 @@ don't need one.
 ## CLI reference
 
 ```bash
-nuxt-native create <name> [--app-id com.example.app] [--platforms ios,android] [--link /path/to/nuxt-native]
+nuxt-native create <name> [--app-id com.example.app] [--platforms ios,android] [--styling native|tailwind] [--link /path/to/nuxt-native]
 nuxt-native init [ios] [android]     # add to an existing project
 nuxt-native dev <ios|android> [ns run flags...]
 nuxt-native build <ios|android> [ns build flags...]
@@ -699,12 +702,9 @@ npx nuxt-native build android --release
 ```
 
 `--link` points the generated project's `nuxt-native` dependency at a local
-checkout (a real `file:` spec — npm symlinks it, no network fetch) instead
-of `github:vastx-tech/nuxt-native`, and skips that checkout's own `prepare`
-build for the install too (npm runs a `file:` dependency's `prepare` script
-regardless of `--ignore-scripts` — confirmed directly). Meant for developing
-nuxt-native itself, or any machine where a fresh install's own build step
-is a real memory risk:
+checkout (a `file:` spec — npm symlinks it, no network fetch) instead of
+`github:vastx-tech/nuxt-native`. Both paths use the prebuilt `dist` committed
+with the framework, so installing an app does not compile the framework:
 
 ```bash
 nuxt-native create myapp --link ../nuxt-native
@@ -753,7 +753,8 @@ by hand too.
 
 ## MCP server (agent-driven dev workflow)
 
-Run `npx nuxt-native mcp` from an app project to start the bundled stdio
+Install optional MCP dependencies with `npm install -D @modelcontextprotocol/sdk zod`,
+then run `npx nuxt-native mcp` from an app project to start the bundled stdio
 MCP server. Configure your AI agent to launch that command; no separate
 repository clone or server folder is needed. New projects include setup
 instructions in their README. See [MCP setup](./mcp-server/README.md) for

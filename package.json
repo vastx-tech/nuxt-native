@@ -28,8 +28,8 @@
     "mcp-server/README.md"
   ],
   "scripts": {
-    "prepack": "nuxt-module-build build",
-    "prepare": "nuxt-module-build build",
+    "release:build": "node --max-old-space-size=4096 ./node_modules/@nuxt/module-builder/dist/cli.mjs build",
+    "prepublishOnly": "npm run release:build",
     "dev": "nuxi dev playground",
     "dev:build": "nuxi build playground",
     "dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxi prepare playground",
@@ -38,23 +38,29 @@
     "native:dev:android": "node ./bin/nuxt-native.mjs dev android",
     "lint": "eslint .",
     "typecheck": "vue-tsc --noEmit",
-    "test": "node --test cli/tests/styling.test.mjs cli/tests/ios-infoplist-fix.test.mjs mcp-server/packaged-cli.test.mjs",
+    "test": "node --test cli/tests/styling.test.mjs cli/tests/ios-infoplist-fix.test.mjs cli/tests/lighter.test.mjs mcp-server/packaged-cli.test.mjs",
     "test:mcp": "node --test mcp-server/packaged-cli.test.mjs",
     "test:styling": "node --test cli/tests/styling.test.mjs",
     "test:ios-infoplist": "node --test cli/tests/ios-infoplist-fix.test.mjs"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@iconify/types": "^2.0.0",
+    "@iconify/utils": "^3.1.7",
     "@nativescript/tailwind": "4.0.10",
     "@nuxt/kit": "^4.0.0",
     "defu": "^6.1.4",
-    "postcss-value-parser": "4.2.0",
-    "zod": "^3.25.0"
+    "postcss-value-parser": "4.2.0"
   },
   "peerDependencies": {
     "@nativescript/core": "^9.0.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "nativescript-vue": "^3.0.0",
-    "nuxt": "^4.0.0"
+    "nuxt": "^4.0.0",
+    "zod": "^3.25.0"
+  },
+  "peerDependenciesMeta": {
+    "@modelcontextprotocol/sdk": { "optional": true },
+    "zod": { "optional": true }
   },
   "devDependencies": {
     "@nativescript/camera": "^7.0.0",
@@ -62,6 +68,7 @@
     "@nativescript/geolocation": "^9.0.0",
     "@nativescript/types": "^9.1.1",
     "@nativescript/webpack": "~5.0.38",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@nuxt/eslint-config": "^1.0.0",
     "@nuxt/module-builder": "^1.0.3",
     "@nuxt/schema": "^4.0.0",
@@ -74,6 +81,7 @@
     "tailwindcss": "^3.4.19",
     "typescript": "^5.6.0",
     "vitest": "^2.0.0",
-    "vue-tsc": "^2.0.0"
+    "vue-tsc": "^2.0.0",
+    "zod": "^3.25.0"
   }
 }

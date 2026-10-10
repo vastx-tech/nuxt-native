@@ -7,6 +7,12 @@
   plain `View`), so a styled GridLayout with @tap gives the same tap
   behavior with real layout flexibility — a spinner can replace the label
   while `loading`, for instance.
+
+  A default slot overrides `text` entirely when provided (checked via
+  `$slots.default`, same pattern NPage already uses for `actionBar`) —
+  for composing an icon alongside a label, e.g.
+  `<NButton><NFlex class="flex-row items-center"><NSvg .../><NText text="..."/></NFlex></NButton>`,
+  which plain `text` can't express since it only ever renders one `<Label>`.
 -->
 <template>
   <GridLayout
@@ -17,6 +23,7 @@
     @tap="onTap"
   >
     <ActivityIndicator v-if="loading" busy="true" :color="palette.text" width="20" height="20" />
+    <slot v-else-if="$slots.default" />
     <Label v-else :text="text" :style="labelStyle" textWrap="false" />
   </GridLayout>
 </template>

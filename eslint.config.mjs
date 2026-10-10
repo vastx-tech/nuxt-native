@@ -9,7 +9,7 @@ export default createConfigForNuxt({
   // package.json/tsconfig.json/node_modules — only its compiled output
   // needs excluding here (its own `src/` is plain TS, already valid input
   // for this same config).
-  ignores: ['vscode-extension/out/**', 'vscode-extension/node_modules/**', 'mcp-server/node_modules/**']
+  ignores: ['dist/**', 'vscode-extension/out/**', 'vscode-extension/node_modules/**', 'mcp-server/node_modules/**']
 }).append({
   // Nuxt's file-based routing names pages by their file (index.vue,
   // [id].vue) — the multi-word rule exists to avoid clashing with native
@@ -28,6 +28,13 @@ export default createConfigForNuxt({
   // the same way @nativescript/core's own native-callback code (e.g.
   // AttachListener in ui/frame/index.android.js) is untyped plain JS.
   files: ['src/runtime/composables/useWebSocket.*.ts'],
+  rules: {
+    '@typescript-eslint/no-explicit-any': 'off'
+  }
+}).append({
+  // NativeScript's renderer APIs expose event payloads and directive hooks
+  // without narrow types; this bridge intentionally handles those values.
+  files: ['src/runtime/vue-compat.ts'],
   rules: {
     '@typescript-eslint/no-explicit-any': 'off'
   }

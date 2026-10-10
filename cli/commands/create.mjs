@@ -1,9 +1,10 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
   appVue,
   gitignore,
   indexPage,
+  nativeIndexPage,
   nuxtConfig,
   packageJson,
   projectReadme,
@@ -28,24 +29,16 @@ import { stylingGuide, stylingAgentInstructions } from '../lib/styling-guide.mjs
  *
  * `link`, when given, points at a local nuxt-native checkout on disk
  * instead of depending on `github:vastx-tech/nuxt-native` — the generated
- * project's `nuxt-native` dependency becomes a real `file:` spec (npm
- * symlinks it, no network fetch). This exists because `npx
- * vastx-tech/nuxt-native create ...`'s own fresh install has a real,
- * confirmed failure mode on a memory-constrained machine: it has to run
- * nuxt-native's own `prepare` script (an esbuild-based build) as part of
- * installing it, which — reproduced directly, more than once — can OOM-crash
- * a small machine before `create` ever gets to run at all, leaving no
- * project behind and only an obscure npm cleanup error as a clue. `link`
- * sidesteps the network fetch entirely, and additionally works around that
- * same `prepare`-script cost for the *local* install too (see
- * `withPrepareScriptDisabled` below) — genuinely necessary, not just a
- * nicety: npm runs a `file:` dependency's `prepare` script regardless of
- * `--ignore-scripts` (confirmed directly), so without this, even a local
- * link pays the same OOM-risking cost on every single `create`.
+ * project's dependency becomes a `file:` spec (npm symlinks it). Both paths
+ * use the prebuilt dist committed with a release, so neither needs to
+ * compile the framework during installation.
  */
-export async function create(name, { appId, platforms, link } = {}) {
+export async function create(name, { appId, platforms, link, styling = 'native' } = {}) {
   if (!name) {
     throw new Error('[nuxt-native] Usage: nuxt-native create <project-name> [--app-id com.example.app] [--platforms ios,android] [--link /path/to/nuxt-native]')
+  }
+  if (!['native', 'tailwind'].includes(styling)) {
+    throw new Error('[nuxt-native] --styling must be native or tailwind')
   }
 
   const targetDir = resolve(process.cwd(), name)
@@ -63,15 +56,13 @@ export async function create(name, { appId, platforms, link } = {}) {
   }
 
   console.log(`[nuxt-native] Scaffolding ${name}/ ...`)
-  scaffold(targetDir, { appId: resolvedAppId, appName: name, dependencySpec })
+  scaffold(targetDir, { appId: resolvedAppId, appName: name, dependencySpec, styling })
 
   console.log('[nuxt-native] Installing dependencies (this pulls Nuxt, nuxt-native, and NativeScript) ...')
   if (linkPath) {
     console.log(`[nuxt-native] Linking nuxt-native to local checkout: ${linkPath}`)
-    await withPrepareScriptDisabled(linkPath, () => run('npm', ['install'], { cwd: targetDir }))
-  } else {
-    await run('npm', ['install'], { cwd: targetDir })
   }
+  await run('npm', ['install'], { cwd: targetDir })
 
   // init() operates on process.cwd() (it reads nuxt.config.ts and shells to
   // `ns` relative to it) — switch into the new project the same way a user
@@ -86,14 +77,16 @@ export async function create(name, { appId, platforms, link } = {}) {
 `)
 }
 
-function scaffold(targetDir, { appId, appName, dependencySpec }) {
+function scaffold(targetDir, { appId, appName, dependencySpec, styling }) {
   mkdirSync(resolve(targetDir, 'app/pages'), { recursive: true })
 
-  writeFileSync(resolve(targetDir, 'package.json'), packageJson(appName, dependencySpec))
-  writeFileSync(resolve(targetDir, 'README.md'), projectReadme())
-  writeFileSync(resolve(targetDir, 'STYLING.md'), stylingGuide())
-  writeFileSync(resolve(targetDir, 'AGENTS.md'), stylingAgentInstructions())
-  writeFileSync(resolve(targetDir, 'nuxt.config.ts'), nuxtConfig(appId, appName))
+  writeFileSync(resolve(targetDir, 'package.json'), packageJson(appName, dependencySpec, styling))
+  writeFileSync(resolve(targetDir, 'README.md'), projectReadme(styling))
+  if (styling === 'tailwind') {
+    writeFileSync(resolve(targetDir, 'STYLING.md'), stylingGuide())
+    writeFileSync(resolve(targetDir, 'AGENTS.md'), stylingAgentInstructions())
+  }
+  writeFileSync(resolve(targetDir, 'nuxt.config.ts'), nuxtConfig(appId, appName, styling))
   writeFileSync(resolve(targetDir, 'tsconfig.json'), tsconfig())
   writeFileSync(resolve(targetDir, '.gitignore'), gitignore())
   writeFileSync(resolve(targetDir, 'app/app.vue'), appVue())
@@ -101,34 +94,5 @@ function scaffold(targetDir, { appId, appName, dependencySpec }) {
   // ensureTailwindSetup() inside init(), which create() calls below —
   // one place for both create's fresh-scaffold path and init's
   // retrofit-an-existing-project path, instead of duplicating this here.
-  writeFileSync(resolve(targetDir, 'app/pages/index.vue'), indexPage())
-}
-
-/**
- * Temporarily replaces the linked checkout's own `package.json`
- * `scripts.prepare` with a no-op for the duration of `fn`, then restores
- * the exact original content — regardless of whether `fn` succeeds or
- * throws. Safe to skip entirely if the checkout's `dist/` is already
- * built (the common case for a real, working local checkout): this never
- * touches `dist/` itself, only avoids re-running the build that produced
- * it.
- */
-async function withPrepareScriptDisabled(checkoutPath, fn) {
-  const pkgPath = resolve(checkoutPath, 'package.json')
-  const original = readFileSync(pkgPath, 'utf8')
-  const pkg = JSON.parse(original)
-
-  if (!pkg.scripts?.prepare) {
-    await fn()
-    return
-  }
-
-  pkg.scripts.prepare = 'echo nuxt-native: skipping prepare (temporarily disabled by nuxt-native create --link)'
-  writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n')
-
-  try {
-    await fn()
-  } finally {
-    writeFileSync(pkgPath, original)
-  }
+  writeFileSync(resolve(targetDir, 'app/pages/index.vue'), styling === 'tailwind' ? indexPage() : nativeIndexPage())
 }

@@ -13,8 +13,14 @@ does" to drift apart.
 
 ## Setup
 
-The server ships with `nuxt-native`, including its SDK dependencies. From any
-project with the framework installed, the entry point is:
+The server ships with `nuxt-native`; its SDK dependencies are optional. Install
+them in your app before starting the server:
+
+```bash
+npm install -D @modelcontextprotocol/sdk zod
+```
+
+From a project with the framework installed, the entry point is:
 
 ```bash
 npx nuxt-native mcp

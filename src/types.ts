@@ -13,6 +13,8 @@ export interface NuxtNativeOptions {
    * `nativescript-vue` mounts as the app's first Frame/Page.
    */
   entry: string
+  /** Styling setup: native CSS, Tailwind, or automatic detection for existing projects. */
+  styling?: 'native' | 'tailwind' | 'auto'
   /**
    * npm package names of third-party nuxt-native plugins to run native
    * setup for. Each listed package is resolved for a `"./nuxt-native"`

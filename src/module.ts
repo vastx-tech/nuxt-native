@@ -26,6 +26,7 @@ export default defineNuxtModule<NuxtNativeOptions>({
     appName: 'NuxtNativeApp',
     platforms: ['ios', 'android'],
     entry: 'app/app.vue',
+    styling: 'auto',
     plugins: []
   },
   setup(options, nuxt) {

@@ -15,8 +15,10 @@ test('packaged CLI serves MCP from a new app without a server folder', { timeout
   // Run through npm run test:mcp so the same npm CLI works on Windows and Unix.
   assert.ok(process.env.npm_execpath, 'Run npm run test:mcp')
   const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
-  assert.ok(pkg.dependencies['@modelcontextprotocol/sdk'])
-  assert.ok(pkg.dependencies.zod)
+  assert.ok(pkg.devDependencies['@modelcontextprotocol/sdk'])
+  assert.ok(pkg.devDependencies.zod)
+  assert.equal(pkg.peerDependenciesMeta['@modelcontextprotocol/sdk'].optional, true)
+  assert.equal(pkg.peerDependenciesMeta.zod.optional, true)
 
   const scratch = mkdtempSync(join(tmpdir(), 'nuxt-native-mcp-'))
   const staging = join(scratch, 'source')

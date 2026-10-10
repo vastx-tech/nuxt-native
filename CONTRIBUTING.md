@@ -40,3 +40,12 @@ open an issue with what broke.
 - `npm run lint`
 - `npm run typecheck`
 - `npm run test`
+
+## Preparing a distribution
+
+GitHub installs use the committed `dist/` files. After changing `src/`, run
+`npm run release:build` and include the resulting `dist/` changes in the same
+commit. `npm pack --dry-run` checks the package contents without rebuilding.
+The `prepublishOnly` script rebuilds automatically for an npm registry release;
+do not add `prepare`, `prepack`, or a `build` script, because npm runs those
+when installing a Git dependency.

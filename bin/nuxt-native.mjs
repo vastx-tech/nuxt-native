@@ -16,7 +16,14 @@ try {
   switch (command) {
     case 'mcp':
       // Load the SDK only when serving MCP; stdout belongs to the protocol.
-      await import('../mcp-server/bin/server.mjs')
+      try {
+        await import('../mcp-server/bin/server.mjs')
+      } catch (error) {
+        if (error.code === 'ERR_MODULE_NOT_FOUND' && /@modelcontextprotocol\/sdk|zod/.test(error.message)) {
+          throw new Error('[nuxt-native] MCP support is optional. Install it with: npm install -D @modelcontextprotocol/sdk zod', { cause: error })
+        }
+        throw error
+      }
       break
 
     case 'create': {
@@ -24,7 +31,8 @@ try {
       await create(name, {
         appId: flagValue(rest, '--app-id'),
         platforms: flagValue(rest, '--platforms')?.split(','),
-        link: flagValue(rest, '--link')
+        link: flagValue(rest, '--link'),
+        styling: flagValue(rest, '--styling')
       })
       break
     }
@@ -93,15 +101,10 @@ function printHelp() {
   console.log(`nuxt-native — build real native iOS/Android apps with Nuxt
 
 Usage:
-  nuxt-native create <name> [--app-id com.example.app] [--platforms ios,android] [--link /path/to/nuxt-native]
+  nuxt-native create <name> [--app-id com.example.app] [--platforms ios,android] [--styling native|tailwind] [--link /path/to/nuxt-native]
                                       Scaffold a new project, install deps, and wire up native platforms.
                                       --link points at a local nuxt-native checkout instead of fetching from
-                                      GitHub (npm symlinks it — no network fetch, and skips the checkout's
-                                      own prepare-script cost too). Recommended over a bare \`npx
-                                      vastx-tech/nuxt-native create\` while developing nuxt-native itself, or
-                                      on a memory-constrained machine — a fresh GitHub install has to run
-                                      nuxt-native's own build as part of installing it, which can OOM-crash
-                                      before \`create\` ever runs.
+                                      GitHub (npm symlinks it — no network fetch).
   nuxt-native init [ios] [android]    Scaffold nativescript.config.ts + native platforms (existing project)
   nuxt-native dev <ios|android> [ns run flags...]     Build, deploy, and LiveSync to a device/simulator
   nuxt-native build <ios|android> [ns build flags...] Produce a native build artifact
