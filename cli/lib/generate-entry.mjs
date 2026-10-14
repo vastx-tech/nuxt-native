@@ -67,7 +67,7 @@ export function generateEntry({ projectRoot = process.cwd(), pagesDir = 'app/pag
   // build/dev run without needing that static config file rewritten.
   const autoImportEntries = collectAutoImportEntries(projectRoot)
   writeFileSync(join(outDir, 'auto-imports.json'), JSON.stringify(autoImportEntries))
-  writeFileSync(join(outDir, 'auto-imports.d.ts'), renderAutoImportTypes(autoImportEntries, RUNTIME_COMPONENTS))
+  writeFileSync(join(outDir, 'auto-imports.d.ts'), renderAutoImportTypes(autoImportEntries, RUNTIME_COMPONENTS, { pinia: isPiniaInstalled(projectRoot) }))
 
   return { routes, initial, outDir }
 }
@@ -231,8 +231,9 @@ function renderAppEntry({ components = RUNTIME_COMPONENTS, usePinia, useUiSvg } 
     .map(({ tag }) => `  .component(${JSON.stringify(tag)}, ${tag})`)
     .join('\n')
 
-  const piniaImport = usePinia ? `import { createPinia } from 'pinia'\n` : ''
-  const piniaUse = usePinia ? '  .use(createPinia())\n' : ''
+  // piniaPersist only acts on stores that opt in with `persist`.
+  const piniaImport = usePinia ? `import { createPinia } from 'pinia'\nimport { piniaPersist } from 'nuxt-native/runtime/pinia-persist.js'\n` : ''
+  const piniaUse = usePinia ? '  .use(createPinia().use(piniaPersist))\n' : ''
 
   const uiSvgImport = useUiSvg ? `import { SVGView } from '@nativescript-community/ui-svg'\n` : ''
   // app.registerElement(...) — confirmed a real chainable method on the

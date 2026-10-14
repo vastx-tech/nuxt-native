@@ -449,16 +449,15 @@ export const useCounterStore = defineStore('counter', () => {
 </template>
 
 <script setup lang="ts">
-import { useCounterStore } from '../stores/counter'
-const counter = useCounterStore()
+const counter = useCounterStore() // auto-imported from app/stores/
 </script>
 ```
 
 `nuxt-native init`/`create` detects a `pinia` dependency and wires
 `createApp(RootFrame).use(createPinia())` into the generated bootstrap
-automatically — nothing else to configure. Stores are plain Pinia, explicitly
-imported the same way composables are today (see the auto-imports note
-above) — no special nuxt-native API. This works because Pinia's core is
+automatically — nothing else to configure. Stores are plain Pinia,
+auto-imported from `app/stores/` the same way composables are (see
+Auto-imports below) — no special nuxt-native API. This works because Pinia's core is
 pure Vue reactivity with no DOM dependency at all (checked directly against
 its actual dist output, not assumed), and every DOM/devtools-only code path
 it has is gated behind a `typeof window !== 'undefined'` check that's
@@ -473,6 +472,38 @@ runs at all (it's a separate NativeScript webpack pipeline end to end), or
 assume a DOM/SSR context that doesn't exist here. Pinia works because its
 actual logic has neither dependency; before adding another module, check
 whether the same is true for it.
+
+### Saving state on the device
+
+There's no `localStorage` in a native app. Two built-in replacements, both
+saved with NativeScript's `ApplicationSettings` (SharedPreferences on
+Android, NSUserDefaults on iOS), so they suit settings and small state
+rather than large data sets:
+
+```ts
+// A ref that's saved on change and restored at startup (auto-imported)
+const theme = useStorage('theme', 'system')
+const recent = useStorage<string[]>('recent-searches', [])
+recent.value.push('tokyo')  // deep changes are saved too
+recent.value = undefined    // removes it; the ref goes back to the default
+```
+
+```ts
+// A whole Pinia store, restored when the app starts
+export const useCartStore = defineStore('cart', () => { /* ... */ }, { persist: true })
+// or only some of its state, under a key of your choosing
+defineStore('auth', { state: () => ({ token: '', draft: '' }), persist: { pick: ['token'], key: 'auth' } })
+```
+
+- `useStorage` returns the same ref for the same key everywhere in the app.
+- Values are stored as JSON: use plain data. Dates come back as strings,
+  and class instances come back as plain objects.
+- `persist` is handled by a Pinia plugin that the generated app entry
+  registers whenever `pinia` is installed. It only affects stores that set
+  `persist`, and the option is typed in the generated
+  `.nuxt-native/auto-imports.d.ts`.
+- Neither is encrypted: don't store secrets you'd keep out of
+  SharedPreferences/NSUserDefaults.
 
 ## MCP client (`useMcpClient()`)
 

@@ -40,6 +40,7 @@ const NUXT_NATIVE_COMPOSABLES = [
   { name: 'useNativeRouter', from: 'nuxt-native/runtime/composables/useNativeRouter.js' },
   { name: 'useSafeArea', from: 'nuxt-native/runtime/composables/useSafeArea.js' },
   { name: 'useMcpClient', from: 'nuxt-native/runtime/composables/useMcpClient.js' },
+  { name: 'useStorage', from: 'nuxt-native/runtime/composables/useStorage.js' },
   { name: 'padding', from: 'nuxt-native/runtime/style.js' },
   { name: 'margin', from: 'nuxt-native/runtime/style.js' },
   { name: 'bg', from: 'nuxt-native/runtime/style.js' },
@@ -164,7 +165,11 @@ function scanValueExports(projectRoot, code, file) {
 // GlobalComponents, so <NTabs>, <NButton>, ... get real prop/event types
 // in native projects too — they're registered globally at runtime, but
 // vue-tsc otherwise sees them as unknown tags and checks nothing.
-export function renderAutoImportTypes(entries, components = []) {
+//
+// `pinia`: when the project has pinia, also type defineStore's `persist`
+// option (runtime/pinia-persist.ts). Only then — augmenting a module that
+// can't be resolved is itself a type error.
+export function renderAutoImportTypes(entries, components = [], { pinia = false } = {}) {
   const typeOf = ({ name, from, typesFrom, export: exported = name }) => `typeof import(${JSON.stringify(typesFrom ?? from)})['${exported}']`
   const globals = entries.map(entry => `  const ${entry.name}: ${typeOf(entry)}`).join('\n')
   const templateProps = entries.map(entry => `    readonly ${entry.name}: ${typeOf(entry)}`).join('\n')
@@ -186,5 +191,14 @@ ${templateProps}
 ${globalComponents}
   }
 }
-`
+${pinia ? PINIA_PERSIST_TYPES : ''}`
 }
+
+const PINIA_PERSIST_TYPES = `declare module 'pinia' {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  export interface DefineStoreOptionsBase<S, Store> {
+    /** Save this store's state on the device and restore it at startup. */
+    persist?: boolean | import('nuxt-native/runtime/pinia-persist.js').PersistOptions
+  }
+}
+`

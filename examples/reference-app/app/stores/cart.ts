@@ -30,4 +30,8 @@ export const useCartStore = defineStore('cart', () => {
   }
 
   return { lines, itemCount, totalInCents, addItem, removeItem }
+}, {
+  // Saved on the device and restored at startup (nuxt-native's Pinia
+  // plugin), so the cart survives the app being closed.
+  persist: true
 })

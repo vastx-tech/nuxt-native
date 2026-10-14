@@ -63,7 +63,10 @@ different mechanism in real Nuxt (component discovery, not the same
 ## State management
 
 `app/stores/cart.ts` is a plain Pinia setup-store (`defineStore('cart', ()
-=> {...})`) — nothing native-specific about it. Pinia works here because
+=> {...})`) — nothing native-specific about it. Its `{ persist: true }` option
+saves the cart on the device and restores it when the app starts again
+(nuxt-native's Pinia plugin, see the framework README's "Saving state on
+the device"). Pinia works here because
 its actual store engine has no DOM dependency at all (confirmed by
 reading its real dist output, see `ARCHITECTURE.md` in the framework repo
 for the full verification) — it's wired in automatically by

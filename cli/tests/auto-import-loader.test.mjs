@@ -154,6 +154,10 @@ export { hidden as revealed }
     assert.match(dts, /const useTheme: typeof import\("[^"]+useTheme\.ts"\)\['default'\]/)
     assert.match(dts, /interface ComponentCustomProperties \{[\s\S]*readonly fadeIn:/)
 
+    assert.doesNotMatch(dts, /declare module 'pinia'/)
+    assert.match(renderAutoImportTypes([], [], { pinia: true }), /declare module 'pinia'[\s\S]*persist\?: boolean \| import\('nuxt-native\/runtime\/pinia-persist\.js'\)\.PersistOptions/)
+    assert.ok(entries.some(e => e.name === 'useStorage'))
+
     const withComponents = renderAutoImportTypes([], [{ tag: 'NTabs', specifier: 'nuxt-native/runtime/components/NTabs.vue' }])
     assert.match(withComponents, /interface GlobalComponents \{\s*NTabs: typeof import\("nuxt-native\/runtime\/components\/NTabs\.vue"\)\['default'\]/)
   } finally {
