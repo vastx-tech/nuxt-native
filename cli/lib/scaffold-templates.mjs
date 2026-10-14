@@ -30,7 +30,10 @@ export function packageJson(appName, dependencySpec = NUXT_NATIVE_DEPENDENCY_SPE
         'native:dev:ios': 'nuxt-native dev ios',
         'native:dev:android': 'nuxt-native dev android',
         'native:build:ios': 'nuxt-native build ios --release',
-        'native:build:android': 'nuxt-native build android --release'
+        'native:build:android': 'nuxt-native build android --release',
+        // Type-checks .vue files too, against the auto-import and component
+        // types nuxt-native generates in .nuxt-native/ on every init/dev/build.
+        typecheck: 'vue-tsc --noEmit'
       },
       dependencies: {
         'nuxt-native': dependencySpec,
@@ -53,6 +56,7 @@ export function packageJson(appName, dependencySpec = NUXT_NATIVE_DEPENDENCY_SPE
         // tries to locate a tsconfig. Confirmed by reading ts-loader's
         // compilerSetup.js directly; reproduced by a real user's build log.
         typescript: '~5.8.0',
+        'vue-tsc': '^2.2.0',
         // Pinned to the 3.x line deliberately, not "latest" (which is now
         // Tailwind v4): tailwind.config.cjs's `corePlugins` allowlist below
         // is a v3-only, JS-config API — v4 moved to CSS-first config and
@@ -124,7 +128,14 @@ export function nuxtConfig(appId, appName, styling = 'native') {
   native: {
     appId: ${JSON.stringify(appId)},
     appName: ${JSON.stringify(appName)},
-    styling: ${JSON.stringify(styling)}
+    styling: ${JSON.stringify(styling)},
+    // Android window background, status bar and accent. Match these to
+    // your app's colours (a dark background switches to a dark system
+    // theme) so no white shows between pages.
+    theme: {
+      background: '#F8FAFC',
+      primary: '#4F46E5'
+    }
   }
 })
 `

@@ -5,6 +5,7 @@ import { ensureManifestNamespaceFix } from './manifest-namespace-fix.mjs'
 import { ensureWebSocketDependency } from './websocket-setup.mjs'
 import { ensureNetworkSecurityConfig } from './network-security-setup.mjs'
 import { ensureIosInfoPlistKeys } from './ios-infoplist-fix.mjs'
+import { ensureAndroidMinSdk, ensureAndroidTheme } from './android-theme.mjs'
 import { runPluginSetup } from './plugins.mjs'
 import { existsSync, readFileSync } from 'node:fs'
 
@@ -43,6 +44,16 @@ export async function ensureProjectSetup(projectRoot, config, platforms) {
 
     ensureNetworkSecurityConfig(projectRoot)
     console.log('[nuxt-native] Added a debug-only cleartext exception for useWebSocket() dev servers (127.0.0.1/10.0.2.2/localhost)')
+
+    ensureAndroidMinSdk(projectRoot, config.android?.minSdk)
+
+    const skipped = ensureAndroidTheme(projectRoot, config.theme)
+    if (config.theme?.background) {
+      console.log('[nuxt-native] Android theme generated from native.theme (window background, status bar, accent)')
+      for (const file of skipped) {
+        console.warn(`[nuxt-native] Left App_Resources/Android/src/main/res/${file} alone: it's your own file, not one generated from native.theme.`)
+      }
+    }
   }
 
   if (platforms.includes('ios')) {

@@ -4,6 +4,7 @@ export default defineNuxtConfig({
 
   native: {
     appId: "com.example.referenceapp",
-    appName: "Nuxt Native Reference"
+    appName: "Nuxt Native Reference",
+    theme: { background: "#F8FAFC", primary: "#4F46E5" }
   }
 })

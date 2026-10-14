@@ -144,6 +144,34 @@ Write pages under `app/pages/` using NativeScript-Vue's native elements —
 `<NPage>`, `<NActionBar>`, and `<NTabs>` wrap the common ones with
 sensible defaults. See [`playground/`](./playground) for a working example.
 
+`npm run typecheck` (in projects created with `create`) runs `vue-tsc`
+against your pages, including the types nuxt-native generates for
+auto-imports and its `N*` components. In an existing project, add
+`vue-tsc` and the same script yourself.
+
+### Android theme and minimum version
+
+```ts
+native: {
+  theme: { background: '#0B1020', primary: '#7C5CFF', accent: '#22D3EE' },
+  android: { minSdk: 23 }
+}
+```
+
+- `theme.background` becomes the Android window background and status bar
+  colour. Without it, Android's window stays white, and a dark app shows
+  a white flash on every page transition. A dark background also switches
+  the system theme (dialogs, pickers) to dark; a light one gets dark
+  status bar icons. `primary` (toolbar, default: `background`) and
+  `accent` (widgets) are optional. The files are generated into
+  `App_Resources/Android/src/main/res/values*/` on every build. A file
+  there that you wrote yourself is left alone, with a warning. iOS isn't
+  affected, and neither are the `N*` components' colours, which still come
+  from `nuxt-native/runtime/theme`.
+- `android.minSdk` defaults to 23 (Android 6.0). NativeScript's own default
+  is 21, which current Google Play services and Firebase libraries no
+  longer support.
+
 ## UI kit
 
 ```vue
@@ -638,14 +666,20 @@ entire machine's physical memory, and a very plausible cause of otherwise
 mysterious build flakiness (Windows can fail to spawn new processes under
 severe memory pressure).
 
-The replacement is computed from the machine's actual total RAM (35% of
-it, clamped to 768 MB–3 GB — there's no real benefit to a NativeScript
-app's build ever exceeding ~3 GB of daemon heap), plus `kotlin.daemon.jvmargs`
+The replacement is computed from the machine's actual total RAM (25% of
+it, clamped to 768 MB–2 GB — there's no real benefit to a NativeScript
+app's build ever exceeding ~2 GB of daemon heap), plus `kotlin.daemon.jvmargs`
 and `org.gradle.workers.max=2` to cap the other JVMs Gradle spins up. It's
 written once (marked with a comment so reruns don't clobber a value you've
 since customized yourself) and never touches the file again after that.
 Verified with a real, full clean rebuild after applying it — succeeded
 identically with a fraction of the memory.
+
+The limit used to be 35% / 3 GB, which still crashed an 8 GB Windows
+machine. Projects tuned before that keep their old value: edit
+`org.gradle.jvmargs` in `platforms/android/gradle.properties`, or delete the
+`# nuxt-native: memory settings tuned` line there and the next build re-tunes
+it.
 
 The generated `webpack.config.cjs` gets the same treatment for
 `ForkTsCheckerWebpackPlugin` (a separate Node process `@nativescript/webpack`

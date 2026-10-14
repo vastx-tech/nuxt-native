@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- nuxt-native: generated from native.theme in nuxt.config — edit there, or delete this line to take this file over -->
+<resources>
+    <style name="AppTheme" parent="AppThemeBase">
+        <item name="android:datePickerStyle">@style/SpinnerDatePicker</item>
+        <item name="android:timePickerStyle">@style/SpinnerTimePicker</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

@@ -30,7 +30,7 @@ const MARKER = '# nuxt-native: memory settings tuned for this machine'
  * range that's been the Gradle/AGP community's long-standing recommendation
  * for small-to-medium Android projects regardless of how much RAM the
  * machine actually has — there's no real benefit to a NativeScript app's
- * build ever exceeding ~3 GB of Gradle daemon heap, and 768 MB is the
+ * build ever exceeding ~2 GB of Gradle daemon heap, and 768 MB is the
  * floor below which Gradle itself tends to struggle on real projects.
  */
 export function ensureGradleMemorySettings(platformsPath, platforms) {
@@ -65,8 +65,12 @@ export function ensureGradleMemorySettings(platformsPath, platforms) {
   }
 }
 
+// 25% of RAM, at most 2 GB. Was 35% / 3 GB, which still crashed a real
+// 8 GB Windows machine (about 2.5 GB Gradle heap, plus the Kotlin daemon
+// at half that, plus the emulator and editor). A NativeScript app's
+// Gradle build is small; 2 GB is plenty.
 function computeHeapSizeMb() {
   const totalMb = totalmem() / 1024 / 1024
-  const fraction = Math.floor(totalMb * 0.35)
-  return Math.min(3072, Math.max(768, fraction))
+  const fraction = Math.floor(totalMb * 0.25)
+  return Math.min(2048, Math.max(768, fraction))
 }
