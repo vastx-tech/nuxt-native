@@ -16,7 +16,6 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useCartStore } from '../../stores/cart'
 
 const props = defineProps<{ id?: string }>()
 const { getProduct } = useProducts()

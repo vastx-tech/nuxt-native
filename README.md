@@ -627,25 +627,35 @@ const { connected } = useWebSocket('wss://your-server.example.com/socket')
 This isn't Nuxt's own `unimport`/auto-import machinery running under the
 hood (that package is ESM-only, and the native build's `webpack.config.cjs`
 is loaded with a plain synchronous `require()` that can't consume it) — it's
-a small first-party webpack loader that does the same thing: a fast scan for
-composable names actually used in a file, skipping anything already
-imported or declared locally, then injecting the right import. Regenerated
-automatically on every `init`/`dev`/`build`, so a composable you add to
-`app/composables/` is picked up on the very next run.
+a small first-party webpack loader that does the same thing using Vue's own
+compiler: it finds the names a file's script and template actually
+reference, skips anything the file already imports, declares, or receives
+as a prop, and injects the right import into `<script setup>`. Regenerated
+automatically on every `init`/`dev`/`build`, so a file you add to
+`app/composables/` or `app/utils/` is picked up on the very next run.
 
-Two real limitations, worth knowing:
+What gets auto-imported, and how names are resolved:
 
+- Every value export of every file in `app/composables/`, `app/utils/` and
+  `app/stores/` (Pinia stores, as with `@pinia/nuxt`),
+  read from the file itself — a `motion.ts` exporting `fadeIn` and
+  `slideUp` gives you both, and the filename doesn't matter. A default
+  export is available under the file's name. Type-only exports and
+  `export * from` re-exports are not included.
+- Names used only in `<template>` work too, at runtime and in
+  `vue-tsc`/your editor.
+- **Your component's own names always win.** A prop, local variable or
+  import named `size`, `placeholder`, `padding`, etc. is never replaced by
+  the auto-imported helper of the same name. If your `<script setup>` calls
+  a helper that a prop of the same component also names, the build fails
+  with a message asking you to import it explicitly under another name,
+  rather than guessing which one you meant.
 - Only composables/utils are covered, not your own custom `.vue`
   components — those still need a normal explicit import (auto-importing
   components is a different mechanism in real Nuxt, not this one).
-- `vue-tsc`/your editor's TS server will still flag a name that's used
-  **only** inside `<template>` and never referenced in `<script>` — Vue's
-  compiler determines a template's available bindings from the script
-  block's own code, not from the ambient types that make `vue-tsc` aware
-  of auto-imports elsewhere. The actual build is unaffected either way;
-  if you see this, reference the name once in `<script>` instead (a
-  `computed()` is usually the natural fix, and is better practice than an
-  inline template call regardless — it's cached, not re-run every render).
+- A component without `<script setup>` can't receive template-only
+  auto-imports (a plain `<script>` block's imports aren't visible to its
+  template); the build warns when that happens.
 
 ## Plugins
 

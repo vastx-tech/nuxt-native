@@ -49,26 +49,16 @@ pages and navigate between them (`navigate('products_id', { params: { id
 and `formatCurrency()` (this app's own util, `app/utils/formatCurrency.ts`)
 are both used in these pages/components with **no import statement** —
 same as `useNativeRouter()`, `useDevice()`, and every other nuxt-native
-composable. Add a new file to `app/composables/` or `app/utils/` exporting
-a function whose name matches the filename, and it's usable the same way
-on the next `dev`/`build` — no wiring needed.
+composable. So is the Pinia store `useCartStore()` from `app/stores/cart.ts`:
+every export of every file in `app/composables/`, `app/utils/` and
+`app/stores/` is auto-imported by its real name, whatever the file is
+called. Add a file there and its exports are usable on the next
+`dev`/`build` — no wiring needed.
 
-Two things this does **not** cover, on purpose:
-
-- **Project components** (`ProductCard.vue`, `SectionHeader.vue`) still
-  need an explicit `import` wherever they're used — component
-  auto-import is a different mechanism in real Nuxt (component
-  discovery, not the same `unimport`-style scan), and isn't part of
-  this yet.
-- **Pinia stores** (`useCartStore`) also need an explicit `import`. Real
-  Nuxt's own Pinia auto-import (`@pinia/nuxt`) works because it does a
-  real static-export analysis to find the store's actual exported name
-  regardless of what the file is called — `cart.ts` exports
-  `useCartStore`, not `useCart`. This framework's auto-import instead
-  assumes a file's export name matches its filename (cheap, no AST
-  parse needed, correct for every composable/util here) — which is
-  exactly the assumption a Pinia store file breaks. Explicit import for
-  stores, deliberately, not a bug.
+**Project components** (`ProductCard.vue`, `SectionHeader.vue`) still need
+an explicit `import` wherever they're used — component auto-import is a
+different mechanism in real Nuxt (component discovery, not the same
+`unimport`-style scan), and isn't part of this yet.
 
 ## State management
 

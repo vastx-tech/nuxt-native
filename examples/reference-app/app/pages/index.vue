@@ -38,15 +38,13 @@
 </template>
 
 <script setup lang="ts">
-// useProducts(), useNativeRouter(), and useCartStore() below — the first
-// two are auto-imported (nuxt-native's own + this project's own
-// composable); ProductCard/SectionHeader (project components) and
-// useCartStore (a Pinia store) are explicitly imported, matching the
-// project's own documented scope for what auto-import does and doesn't
-// cover — see this app's README.
+// useProducts(), useNativeRouter() and useCartStore() below are all
+// auto-imported (this project's composable, nuxt-native's own, and this
+// project's Pinia store). ProductCard/SectionHeader (project components)
+// are explicitly imported — component auto-import isn't covered; see this
+// app's README.
 import ProductCard from '../components/ProductCard.vue'
 import SectionHeader from '../components/SectionHeader.vue'
-import { useCartStore } from '../stores/cart'
 
 const { products } = useProducts()
 const { navigate } = useNativeRouter()

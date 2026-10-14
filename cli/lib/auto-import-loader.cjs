@@ -2,6 +2,7 @@
 
 const fs = require('node:fs')
 const path = require('node:path')
+const { loadVueCompiler } = require('./vue-compiler.cjs')
 
 // Loaders execute per-file, potentially many times per build (and again on
 // every incremental rebuild in `nuxt-native dev`) — read+parse
@@ -28,54 +29,48 @@ function loadEntries(rootContext) {
 }
 
 /**
- * A first-party, minimal auto-import transform — not the `unimport`
- * package Nuxt itself uses, since `unimport` ships ESM-only (confirmed:
- * its package.json `exports` has no CJS entry at all) and this loader has
- * to run inside `@nativescript/webpack`'s webpack.config.cjs, which is
- * loaded with a plain, synchronous `require(configPath)(env)` — no
- * Promise/ESM handling at all (confirmed by reading
- * `@nativescript/webpack/dist/bin/index.js` directly: the returned config
- * is passed straight into `webpack(configuration)`, never awaited).
+ * A first-party auto-import transform — not the `unimport` package Nuxt
+ * itself uses, since `unimport` ships ESM-only and this loader has to run
+ * inside `@nativescript/webpack`'s webpack.config.cjs, which is loaded
+ * with a plain, synchronous `require(configPath)(env)`.
  *
- * Strategy mirrors unimport's own real approach though, not a lesser
- * substitute: a fast identifier scan (not full type-aware analysis),
- * skipping any name the file already imports or declares itself, same as
- * Nuxt's own auto-imports do. Registered as an `enforce: 'pre'` rule (see
- * webpack-config.mjs) against plain `.ts` files and against vue-loader's
- * split-out `<script>` sub-request (`resourceQuery` containing
- * `type=script`).
+ * Names are found with Vue's own parsers, not text matching. The earlier
+ * regex scan matched a name anywhere in the SFC, template included, and
+ * only recognised single-line `import`s and plain `const x` declarations.
+ * So a component with a `placeholder` or `size` prop used in its template
+ * got `import { placeholder } from 'nuxt-native/runtime/style.js'`
+ * injected into `<script setup>` — and a setup binding beats a prop in the
+ * template. That only showed up in release builds: in dev, vue-loader
+ * compiles the template from the untouched file (prop wins); in
+ * production it inlines the template into our modified `<script setup>`
+ * (import wins).
  *
- * One real, confirmed-by-testing subtlety: for that split `<script>`
- * sub-request, `resourcePath` is the *same physical .vue file* as the raw,
- * unsplit request — webpack reads the whole SFC (template, script, style,
- * all of it) fresh from disk again for this virtual module, and
- * vue-loader's own loader (which runs after this one) re-parses whatever
- * `source` it receives from scratch (confirmed by reading vue-loader's own
- * `dist/index.js`: it calls `parse(source, ...)` unconditionally, for both
- * the raw request and every split sub-request). So this loader is never
- * handed *just* the isolated script text — prepending import lines at
- * position 0 (this file's first, wrong attempt) lands them *before*
- * `<template>`, outside every recognized SFC block, where vue-loader's own
- * block-extraction silently drops them — confirmed by inspecting a real
- * compiled bundle and finding the call sites present but the import
- * missing entirely. The fix is to find the actual `<script ...>` opening
- * tag and inject right after it, not at the top of the string.
+ * Now:
+ * - script: free identifier references from a real Babel AST
+ *   (`walkIdentifiers`), minus every top-level declaration — comments,
+ *   member access, object keys, types, function params, destructuring and
+ *   multi-line imports are all handled by the parser, not by regexes.
+ * - template: compiled with `prefixIdentifiers`, so every free template
+ *   reference comes out as `_ctx.name`, with v-for aliases and slot props
+ *   already excluded by Vue's own scope tracking.
+ * - anything the component itself binds — props, setup bindings, Options
+ *   API members; `compileScript().bindings`, exactly what the template
+ *   resolves against — is never imported for the template.
+ * - imports go into `<script setup>` when there is one: a plain `<script>`
+ *   block's imports aren't visible to the template.
+ *
+ * vue-loader hands every `.vue` sub-request the *whole* SFC (it re-parses
+ * `source` each time), so imports are spliced into the chosen block's
+ * content rather than prepended to the string — prepending lands them
+ * outside every block, where vue-loader silently drops them.
  */
 module.exports = function autoImportLoader(source) {
-  // Belt-and-suspenders, not decorative: the webpack rule itself already
-  // restricts this loader to plain .ts files and vue-loader's split-out
-  // <script> sub-request (see webpack-config.mjs) via `resourceQuery`, but
-  // that restriction was confirmed (via direct instrumentation of a real
-  // build) to not reliably exclude the sibling <template> sub-request in
-  // this project's actual, merged config — @nativescript/webpack does its
-  // own config-merging on top of webpack-chain's output, and something in
-  // that merge doesn't preserve/enforce resourceQuery matching the way a
-  // plain webpack config would. Guarding here makes correctness the
-  // loader's own responsibility instead of depending on that behavior:
-  // never touch a request whose resourceQuery says it's anything other
-  // than a script block (a <template>/<style> block, or a component-only
-  // request some other tool adds), and never touch a plain .ts request
-  // that's secretly a declaration file.
+  // Belt-and-suspenders, not decorative: the webpack rule's declarative
+  // resourceQuery restriction was confirmed (via direct instrumentation of
+  // a real build) to not reliably exclude the sibling <template>
+  // sub-request once @nativescript/webpack merges its own config on top.
+  // Never touch a request whose resourceQuery says it's anything other
+  // than a script block, nor a plain .ts request that's a declaration file.
   if (this.resourceQuery && !/type=script/.test(this.resourceQuery)) return source
   if (/\.d\.ts$/.test(this.resourcePath)) return source
 
@@ -83,37 +78,135 @@ module.exports = function autoImportLoader(source) {
   const entries = loadEntries(rootContext)
   if (entries.length === 0) return source
 
-  const missing = entries.filter(({ name }) => {
-    if (!new RegExp(`\\b${name}\\b`).test(source)) return false
-    // Bounded to a single line ([^\n]*), not "until the next semicolon"
-    // ([^;]*, this file's own earlier, real bug): semicolon-free code style
-    // (common, and used throughout this framework's own generated/example
-    // code) has no semicolon to bound the scan at all, so a `[^;]*` version
-    // of this check can span the *entire rest of the file* looking for a
-    // later "from" — including through comments that happen to mention the
-    // name, producing a false "already imported" match and silently
-    // dropping a real, needed import. Reproduced directly: a doc comment
-    // in this file's own reference app (mentioning `formatCurrency` before
-    // its real usage) triggered exactly this, confirmed by inspecting the
-    // compiled bundle and finding a bare, unresolved reference — a real
-    // on-device crash, not a hypothetical.
-    const alreadyImported = new RegExp(`^[^\\n]*\\bimport\\b[^\\n]*\\b${name}\\b[^\\n]*\\bfrom\\b`, 'm').test(source)
-    const declaredLocally = new RegExp(`\\b(?:function|const|let|var)\\s+${name}\\b`).test(source)
-    return !alreadyImported && !declaredLocally
+  const compiler = loadVueCompiler(rootContext)
+  const byName = new Map(entries.map(entry => [entry.name, entry]))
+  const render = names => [...names].map((name) => {
+    const { from, export: exported = name } = byName.get(name)
+    const spec = exported === name ? name : `${exported} as ${name}`
+    return `import { ${spec} } from ${JSON.stringify(from)};`
+  }).join('\n')
+
+  if (!/\.vue$/.test(this.resourcePath)) {
+    let script
+    try {
+      script = analyzeScript(compiler, source, /\.tsx?$/.test(this.resourcePath))
+    } catch {
+      return source // a syntax error — the real TS/JS compile step reports it properly
+    }
+    const missing = [...script.used].filter(name => byName.has(name) && !script.declared.has(name))
+    return missing.length ? `${render(missing)}\n${source}` : source
+  }
+
+  const { descriptor } = compiler.parse(source, { filename: this.resourcePath })
+  const target = descriptor.scriptSetup || descriptor.script
+  if (!target || target.src) return source
+
+  const declared = new Set()
+  const scriptUsed = new Set()
+  for (const block of [descriptor.script, descriptor.scriptSetup]) {
+    if (!block || block.src) continue
+    let script
+    try {
+      script = analyzeScript(compiler, block.content, /^tsx?$/.test(block.lang || ''))
+    } catch {
+      return source
+    }
+    script.declared.forEach(name => declared.add(name))
+    script.used.forEach(name => scriptUsed.add(name))
+  }
+
+  const bindings = componentBindings(compiler, descriptor)
+  const missing = new Set()
+
+  for (const name of scriptUsed) {
+    if (!byName.has(name) || declared.has(name)) continue
+    if (descriptor.scriptSetup && bindings?.[name] === 'props') {
+      // Importing would make the template see the helper instead of the
+      // prop; skipping would leave the script with an undefined name.
+      // Fail the build rather than pick either silently.
+      this.emitError(new Error(`nuxt-native auto-imports: \`${name}\` is both a prop of this component and an auto-imported helper used in its script. Rename the prop, or import the helper explicitly under another name: import { ${name} as ${name}Helper } from ${JSON.stringify(byName.get(name).from)}`))
+      continue
+    }
+    missing.add(name)
+  }
+
+  const templateUsed = [...templateReferences(compiler, descriptor, this.resourcePath)]
+    .filter(name => byName.has(name) && !declared.has(name) && !missing.has(name))
+  if (templateUsed.length > 0) {
+    if (!descriptor.scriptSetup) {
+      this.emitWarning(new Error(`nuxt-native auto-imports: ${templateUsed.map(n => `\`${n}\``).join(', ')} used in the template of a component without <script setup> — imports in a plain <script> aren't visible to the template. Expose them from the component (e.g. methods) or switch to <script setup>.`))
+    } else if (!bindings) {
+      // Couldn't work out the component's own bindings (see
+      // componentBindings), so any of these could be a prop. Never risk
+      // shadowing one: ask for an explicit import instead.
+      this.emitWarning(new Error(`nuxt-native auto-imports: couldn't analyse this component's props, so ${templateUsed.map(n => `\`${n}\``).join(', ')} (used only in the template) were not auto-imported. Import them explicitly if they're helpers rather than props.`))
+    } else {
+      templateUsed.filter(name => !(name in bindings)).forEach(name => missing.add(name))
+    }
+  }
+
+  if (missing.size === 0) return source
+
+  const insertAt = target.loc.start.offset
+  return source.slice(0, insertAt) + '\n' + render(missing) + source.slice(insertAt)
+}
+
+function analyzeScript(compiler, code, isTs) {
+  const ast = compiler.babelParse(code, {
+    sourceType: 'module',
+    plugins: isTs ? ['typescript'] : []
   })
 
-  if (missing.length === 0) return source
+  const declared = new Set()
+  for (let node of ast.program.body) {
+    if ((node.type === 'ExportNamedDeclaration' || node.type === 'ExportDefaultDeclaration') && node.declaration) {
+      node = node.declaration
+    }
+    if (node.type === 'ImportDeclaration') {
+      node.specifiers.forEach(spec => declared.add(spec.local.name))
+    } else if (node.type === 'VariableDeclaration') {
+      node.declarations.forEach(decl => compiler.extractIdentifiers(decl.id).forEach(id => declared.add(id.name)))
+    } else if (node.id && /^(?:FunctionDeclaration|ClassDeclaration|TSEnumDeclaration)$/.test(node.type)) {
+      declared.add(node.id.name)
+    }
+  }
 
-  const importLines = missing.map(({ name, from }) => `import { ${name} } from ${JSON.stringify(from)};`).join('\n')
+  // Reports only references not bound by an enclosing function/block
+  // scope; top-level declarations are subtracted via `declared`.
+  const used = new Set()
+  compiler.walkIdentifiers(ast.program, (id, _parent, _stack, _isReference, isLocal) => {
+    if (!isLocal) used.add(id.name)
+  })
 
-  const isVueFile = /\.vue$/.test(this.resourcePath)
-  if (!isVueFile) return `${importLines}\n${source}`
+  return { declared, used }
+}
 
-  // Inject right after the <script ...> opening tag, not at position 0 —
-  // see the doc comment above for exactly why that distinction matters.
-  const scriptTagMatch = /<script\b[^>]*>/.exec(source)
-  if (!scriptTagMatch) return source // no <script> block in this SFC at all — nothing to do
+// Everything the component binds for its template: props, setup bindings,
+// Options API members. null when compileScript can't analyse the file —
+// e.g. defineProps<T>() with a T it can't resolve.
+function componentBindings(compiler, descriptor) {
+  try {
+    return compiler.compileScript(descriptor, {
+      id: 'nuxt-native-auto-import',
+      fs: {
+        fileExists: file => fs.existsSync(file),
+        readFile: file => fs.readFileSync(file, 'utf8')
+      }
+    }).bindings || {}
+  } catch {
+    return null
+  }
+}
 
-  const insertAt = scriptTagMatch.index + scriptTagMatch[0].length
-  return source.slice(0, insertAt) + '\n' + importLines + source.slice(insertAt)
+function templateReferences(compiler, descriptor, filename) {
+  const template = descriptor.template
+  if (!template || template.src || (template.lang && template.lang !== 'html')) return new Set()
+
+  const { code } = compiler.compileTemplate({
+    source: template.content,
+    filename,
+    id: 'nuxt-native-auto-import',
+    compilerOptions: { prefixIdentifiers: true }
+  })
+  return new Set([...code.matchAll(/\b_ctx\.([A-Za-z_$][\w$]*)/g)].map(match => match[1]))
 }

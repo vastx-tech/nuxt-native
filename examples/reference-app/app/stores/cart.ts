@@ -7,11 +7,9 @@ interface CartLine {
   quantity: number
 }
 
-// Pinia stores are deliberately NOT auto-imported by nuxt-native (unlike
-// composables/utils) — see auto-imports.mjs's own comment for why: a
-// store file conventionally exports a name (`useCartStore`) that doesn't
-// match its filename (`cart.ts`), which the filename-matching auto-import
-// convention can't resolve safely. Import this one explicitly.
+// Auto-imported like composables/utils: nuxt-native reads this file's real
+// exports, so `useCartStore` is available everywhere even though the file
+// is called `cart.ts`.
 export const useCartStore = defineStore('cart', () => {
   const lines = ref<CartLine[]>([])
 

@@ -1,5 +1,8 @@
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { basename, extname, join } from 'node:path'
+
+const { loadVueCompiler } = createRequire(import.meta.url)('./vue-compiler.cjs')
 
 /**
  * Every nuxt-native runtime composable, explicit and hand-maintained —
@@ -60,51 +63,82 @@ const NUXT_NATIVE_COMPOSABLES = [
 
 /**
  * Computes the full auto-import entry list for a project: nuxt-native's
- * own composables above, plus one entry per file directly inside the
- * project's own `app/composables/` (mirroring Nuxt's real convention for
- * that directory). Regenerated on every `generateEntry()` call (init/dev/
- * build all call it), so a composable file added after the project's
- * webpack.config.cjs was first written is picked up on the next build —
- * the config file itself never needs rewriting, only this data.
+ * own composables above, plus every value export of every file directly
+ * inside the project's own `app/composables/`, `app/utils/` and
+ * `app/stores/` (mirroring Nuxt's own convention for the first two, and
+ * @pinia/nuxt's default `storesDirs` for the third). Regenerated on every
+ * `generateEntry()` call (init/dev/build all call it), so a file added
+ * after the project's webpack.config.cjs was first written is picked up
+ * on the next build — the config file itself never needs rewriting.
  *
- * Assumes each project composable/util file exports a named function
- * matching its own filename (`useFoo.ts` -> `useFoo`, `formatDate.ts` ->
- * `formatDate`) — the same assumption this framework's own composables
- * all follow. A real static export analysis (like Nuxt's own scanner
- * does) would handle mismatched names too, but would need a real AST
- * parse per file; this filename convention covers the common case
- * without that cost, and is an explicit, documented limitation rather
- * than a silent one. Pinia stores (`app/stores/`) are deliberately NOT
- * covered here for the same reason real Nuxt's own auto-import doesn't
- * use this filename-matching approach for them either: a store file
- * conventionally exports `useCartStore` from `cart.ts` — a real name
- * mismatch this simple convention can't handle — so store composables
- * still need an explicit import.
- *
- * Scans both `app/composables/` and `app/utils/`, mirroring Nuxt's own
- * convention that both directories auto-import their exports the same
- * way (utils/ isn't just for composables' internal helpers on the web
- * either).
+ * Exports are read from each file's real AST, same as Nuxt's own scanner:
+ * `motion.ts` exporting `fadeIn` and `slideUp` gives two entries, and no
+ * entry named `motion`. (This used to assume one export named after the
+ * file, which broke the generated types for any file that didn't follow
+ * that — and in particular every Pinia store, since `cart.ts` exports
+ * `useCartStore`.) A default export is imported under the file's name, as
+ * in Nuxt. Type-only exports and `export * from` re-exports are skipped.
  */
-export function collectAutoImportEntries(projectRoot, dirs = ['app/composables', 'app/utils']) {
+export function collectAutoImportEntries(projectRoot, dirs = ['app/composables', 'app/utils', 'app/stores']) {
   const entries = [...NUXT_NATIVE_COMPOSABLES]
+  const seen = new Set(entries.map(entry => entry.name))
 
   for (const relDir of dirs) {
     const dir = join(projectRoot, relDir)
     if (!existsSync(dir)) continue
 
-    for (const file of readdirSync(dir)) {
-      if (!/\.(?:ts|js)$/.test(file)) continue
-      const name = basename(file, extname(file))
+    for (const file of readdirSync(dir).sort()) {
+      if (!/\.(?:ts|js)$/.test(file) || /\.d\.ts$/.test(file)) continue
       // Forward-slash even on Windows: this ends up as a literal import
       // specifier in generated/read output, same reasoning as scan-pages.mjs's
       // own route `file` field.
       const from = join(dir, file).replace(/\\/g, '/')
-      entries.push({ name, from })
+      const fileName = basename(file, extname(file))
+
+      for (const exported of scanValueExports(projectRoot, readFileSync(join(dir, file), 'utf8'), file)) {
+        const name = exported === 'default' ? fileName : exported
+        // First definition wins on a clash, nuxt-native's own included —
+        // the same name can't be auto-imported from two places at once.
+        if (seen.has(name) || !/^[a-z_$][\w$]*$/i.test(name)) continue
+        seen.add(name)
+        entries.push(exported === name ? { name, from } : { name, from, export: exported })
+      }
     }
   }
 
   return entries
+}
+
+function scanValueExports(projectRoot, code, file) {
+  const { babelParse } = loadVueCompiler(projectRoot)
+  let ast
+  try {
+    ast = babelParse(code, { sourceType: 'module', plugins: /\.ts$/.test(file) ? ['typescript'] : [] })
+  } catch {
+    return [] // a syntax error — the real build reports it
+  }
+
+  const names = []
+  for (const node of ast.program.body) {
+    if (node.type === 'ExportDefaultDeclaration') {
+      names.push('default')
+    } else if (node.type === 'ExportNamedDeclaration' && node.exportKind !== 'type') {
+      const decl = node.declaration
+      if (decl?.type === 'VariableDeclaration') {
+        for (const d of decl.declarations) {
+          if (d.id.type === 'Identifier') names.push(d.id.name)
+        }
+      } else if (decl && /^(?:FunctionDeclaration|ClassDeclaration|TSEnumDeclaration)$/.test(decl.type) && !decl.declare) {
+        names.push(decl.id.name)
+      }
+      for (const spec of node.specifiers) {
+        if (spec.type === 'ExportSpecifier' && spec.exportKind !== 'type') {
+          names.push(spec.exported.type === 'Identifier' ? spec.exported.name : spec.exported.value)
+        }
+      }
+    }
+  }
+  return names
 }
 
 /**
@@ -118,10 +152,17 @@ export function collectAutoImportEntries(projectRoot, dirs = ['app/composables',
  * dts-generation (which, like its webpack plugin, is ESM-only and not
  * usable from this CLI's synchronous CJS/mixed context anyway).
  */
+//
+// Declared twice, as Nuxt's own imports.d.ts does: as globals for <script>,
+// and on ComponentCustomProperties for <template> — vue-tsc resolves a
+// template name against the component instance, never against globals,
+// so without the second block a name used only in a template was flagged.
+// Augmenting @vue/runtime-core, not 'vue': in a native project 'vue' is
+// path-mapped to nativescript-vue, which itself augments @vue/runtime-core.
 export function renderAutoImportTypes(entries) {
-  const declarations = entries
-    .map(({ name, from, typesFrom }) => `  const ${name}: typeof import(${JSON.stringify(typesFrom ?? from)})['${name}']`)
-    .join('\n')
+  const typeOf = ({ name, from, typesFrom, export: exported = name }) => `typeof import(${JSON.stringify(typesFrom ?? from)})['${exported}']`
+  const globals = entries.map(entry => `  const ${entry.name}: ${typeOf(entry)}`).join('\n')
+  const templateProps = entries.map(entry => `    readonly ${entry.name}: ${typeOf(entry)}`).join('\n')
 
   return `// Generated by nuxt-native — do not edit by hand, regenerated on every
 // init/dev/build. Gives vue-tsc/your editor's TS server static knowledge
@@ -129,7 +170,12 @@ export function renderAutoImportTypes(entries) {
 // "Cannot find name" errors, even though no file actually imports them.
 export {}
 declare global {
-${declarations}
+${globals}
+}
+declare module '@vue/runtime-core' {
+  interface ComponentCustomProperties {
+${templateProps}
+  }
 }
 `
 }
