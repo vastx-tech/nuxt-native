@@ -153,6 +153,9 @@ export { hidden as revealed }
     const dts = renderAutoImportTypes(entries)
     assert.match(dts, /const useTheme: typeof import\("[^"]+useTheme\.ts"\)\['default'\]/)
     assert.match(dts, /interface ComponentCustomProperties \{[\s\S]*readonly fadeIn:/)
+
+    const withComponents = renderAutoImportTypes([], [{ tag: 'NTabs', specifier: 'nuxt-native/runtime/components/NTabs.vue' }])
+    assert.match(withComponents, /interface GlobalComponents \{\s*NTabs: typeof import\("nuxt-native\/runtime\/components\/NTabs\.vue"\)\['default'\]/)
   } finally {
     rmSync(project, { recursive: true, force: true })
   }

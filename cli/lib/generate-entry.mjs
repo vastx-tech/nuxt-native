@@ -67,7 +67,7 @@ export function generateEntry({ projectRoot = process.cwd(), pagesDir = 'app/pag
   // build/dev run without needing that static config file rewritten.
   const autoImportEntries = collectAutoImportEntries(projectRoot)
   writeFileSync(join(outDir, 'auto-imports.json'), JSON.stringify(autoImportEntries))
-  writeFileSync(join(outDir, 'auto-imports.d.ts'), renderAutoImportTypes(autoImportEntries))
+  writeFileSync(join(outDir, 'auto-imports.d.ts'), renderAutoImportTypes(autoImportEntries, RUNTIME_COMPONENTS))
 
   return { routes, initial, outDir }
 }

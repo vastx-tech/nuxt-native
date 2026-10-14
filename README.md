@@ -54,7 +54,7 @@ tradeoff React Native and Flutter made, applied to the Nuxt/Vue ecosystem.
   composable.
 - **Components** (`<NPage>`, `<NActionBar>`, `<NTabs>`) are thin,
   safe-area-aware wrappers around NativeScript-Vue's native primitives
-  (`<Frame>`, `<ActionBar>`, `<TabStrip>`, ...).
+  (`<Page>`, `<ActionBar>`, ...), plus a tab layout that keeps tabs alive.
 - **A UI kit** (`<NButton>`, `<NText>`, `<NInput>`, `<NCard>`, `<NSwitch>`,
   `<NSpinner>`, `<NAvatar>`, `<NBadge>`, `<NDivider>`, `<NFlex>`,
   `<NContainer>`, `<NetworkImage>`, `<CachedImage>`, `<NSkeleton>`,
@@ -140,8 +140,8 @@ npx nuxt-native dev android
 ```
 
 Write pages under `app/pages/` using NativeScript-Vue's native elements —
-`<Frame>`, `<StackLayout>`, `<Label>`, `<Button>`, `<TabStrip>` — instead of
-HTML. `<NPage>`, `<NActionBar>`, and `<NTabs>` wrap the common ones with
+`<Frame>`, `<StackLayout>`, `<Label>`, `<Button>` — instead of HTML.
+`<NPage>`, `<NActionBar>`, and `<NTabs>` wrap the common ones with
 sensible defaults. See [`playground/`](./playground) for a working example.
 
 ## UI kit
@@ -227,6 +227,52 @@ real `$showModal` — your content component can dismiss itself by importing
   `animation-name`), looping via the confirmed-real
   `iterations: Number.POSITIVE_INFINITY`, and stopped cleanly on unmount
   via the animation promise's own `.cancel()`.
+
+### Tabs
+
+```vue
+<template>
+  <NPage :scrollable="false">
+    <NTabs v-model="tab" :tabs="tabs">
+      <template #explore><ExploreTab /></template>
+      <template #saved><SavedTab /></template>
+      <template #profile><ProfileTab /></template>
+    </NTabs>
+  </NPage>
+</template>
+
+<script setup lang="ts">
+const tab = ref('explore')
+const tabs = [
+  { name: 'explore', title: 'Explore', icon: 'res://ic_explore' },
+  { name: 'saved', title: 'Saved', icon: 'res://ic_saved' },
+  { name: 'profile', title: 'Profile', icon: 'res://ic_profile' }
+]
+</script>
+```
+
+Don't switch tabs by navigating between pages. Every navigation builds a
+new page, which took 600–800 ms per switch in one real app. `<NTabs>` keeps
+every tab alive instead: each tab's content is built the first time it's
+opened, then stays attached, and switching only changes which tab is
+visible. Scroll position, form input and loaded data are kept.
+
+- Put `<NTabs>` in a page with `:scrollable="false"`, and add a
+  `<ScrollView>` inside each tab that needs one.
+- On Android, the back button returns to the first tab before leaving the
+  page (`:back-to-first="false"` turns this off). It only applies while the
+  tabs page is on screen. A detail page opened from a tab with
+  `useNativeRouter().navigate()` covers the tabs, and going back returns to
+  them unchanged.
+- Props: `position` (`'bottom'`, the default, or `'top'`), `lazy`
+  (default `true`; `false` builds every tab at startup), and
+  `active-color` / `inactive-color` / `bar-color`. The `change` event
+  receives `(name, index)`.
+- To customise the tab buttons (an `<NSvg>` icon, a badge), use the `tab`
+  slot: `<template #tab="{ tab, active }">`.
+- It isn't built on NativeScript's `TabView`. On Android with bottom tabs,
+  `TabView` rebuilds the native views of any tab more than one position
+  from the selected one each time you return to it.
 
 ### Tailwind
 
