@@ -6,6 +6,8 @@ whatever is on `main` when you install.
 
 ## Unreleased
 
+## 2.2.1 - 2026-10-15
+
 ### Added
 
 - nuxt-native is on npm: `npx nuxt-native@latest create my-app`, or

@@ -1,6 +1,6 @@
 {
   "name": "nuxt-native",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Build real native Android and iOS apps with Nuxt and Vue: file-based pages, auto-imports and native views, no WebView. Powered by NativeScript.",
   "keywords": [
     "nuxt",
