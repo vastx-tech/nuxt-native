@@ -6,6 +6,11 @@ whatever is on `main` when you install.
 
 ## Unreleased
 
+### Added
+
+- nuxt-native is on npm: `npx nuxt-native@latest create my-app`, or
+  `npm install nuxt-native` in an existing Nuxt project.
+
 ### Fixed
 
 - On Android, pages with a title no longer have an empty band the height of the

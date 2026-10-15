@@ -2,7 +2,17 @@
   "name": "nuxt-native",
   "version": "2.2.0",
   "description": "Build real native Android and iOS apps with Nuxt and Vue: file-based pages, auto-imports and native views, no WebView. Powered by NativeScript.",
-  "keywords": ["nuxt", "nuxt-module", "vue", "nativescript", "native", "mobile", "android", "ios", "cross-platform"],
+  "keywords": [
+    "nuxt",
+    "nuxt-module",
+    "vue",
+    "nativescript",
+    "native",
+    "mobile",
+    "android",
+    "ios",
+    "cross-platform"
+  ],
   "homepage": "https://nuxt-native.vastx.in",
   "repository": {
     "type": "git",
@@ -22,7 +32,7 @@
   "main": "./dist/module.mjs",
   "types": "./dist/types.d.mts",
   "bin": {
-    "nuxt-native": "./bin/nuxt-native.mjs"
+    "nuxt-native": "bin/nuxt-native.mjs"
   },
   "files": [
     "dist",
@@ -68,8 +78,12 @@
     "zod": "^3.25.0"
   },
   "peerDependenciesMeta": {
-    "@modelcontextprotocol/sdk": { "optional": true },
-    "zod": { "optional": true }
+    "@modelcontextprotocol/sdk": {
+      "optional": true
+    },
+    "zod": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@nativescript/camera": "^7.0.0",

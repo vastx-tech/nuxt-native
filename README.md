@@ -31,7 +31,7 @@ const count = useStorage('count', 0)
 ```
 
 ```bash
-npx github:vastx-tech/nuxt-native create my-app --app-id com.example.myapp
+npx nuxt-native@latest create my-app --app-id com.example.myapp
 cd my-app
 npx nuxt-native dev android   # or: ios
 ```
@@ -114,17 +114,11 @@ tradeoff React Native and Flutter made, applied to the Nuxt/Vue ecosystem.
 
 ## Quickstart
 
-> **Not on npm yet.** `nuxt-native` hasn't been published to the npm
-> registry, so every command below installs straight from this repo
-> instead — `npm install nuxt-native` on its own will 404 (or worse,
-> install an unrelated package if that name is ever taken by someone
-> else).
-
 One command, empty directory to a project with dependencies installed and
 native platforms wired up:
 
 ```bash
-npx github:vastx-tech/nuxt-native create my-app --app-id com.example.myapp
+npx nuxt-native@latest create my-app --app-id com.example.myapp
 cd my-app
 npx nuxt-native dev android   # or: ios
 ```
@@ -141,7 +135,8 @@ install — `ns platform add` will tell you clearly if either is missing.
 
 ### Versions and updating
 
-Each release is a git tag (`v2.1.0`, ...) with notes on the
+Each release is published to [npm](https://www.npmjs.com/package/nuxt-native)
+and tagged on GitHub (`v2.2.1`, ...), with notes on the
 [releases page](https://github.com/vastx-tech/nuxt-native/releases) and in
 [CHANGELOG.md](./CHANGELOG.md). `create` pins new projects to the release that
 created them: their package.json gets
@@ -149,7 +144,7 @@ created them: their package.json gets
 with the same framework code. To update, change the tag and reinstall:
 
 ```bash
-npm install github:vastx-tech/nuxt-native#v2.2.0
+npm install github:vastx-tech/nuxt-native#v2.2.1   # or, from npm: npm install nuxt-native@2.2.1
 npx nuxt-native init   # re-applies generated config for the new version
 ```
 
@@ -160,7 +155,7 @@ differently. Installing without a tag (`github:vastx-tech/nuxt-native`) follows
 Adding it to an **existing** Nuxt project instead:
 
 ```bash
-npm install github:vastx-tech/nuxt-native#v2.1.0 nativescript-vue @nativescript/core
+npm install nuxt-native nativescript-vue @nativescript/core
 ```
 
 ```ts
