@@ -1,7 +1,14 @@
 {
   "name": "nuxt-native",
   "version": "2.2.0",
-  "description": "Build real native Android and iOS apps with Nuxt and Vue — no WebView. A Flutter/React Native-style framework for the Nuxt ecosystem, powered by NativeScript's native runtime. Both platforms are verified on real hardware; see ARCHITECTURE.md for exactly what's been confirmed on-device.",
+  "description": "Build real native Android and iOS apps with Nuxt and Vue: file-based pages, auto-imports and native views, no WebView. Powered by NativeScript.",
+  "keywords": ["nuxt", "nuxt-module", "vue", "nativescript", "native", "mobile", "android", "ios", "cross-platform"],
+  "homepage": "https://nuxt-native.vastx.in",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vastx-tech/nuxt-native.git"
+  },
+  "bugs": "https://github.com/vastx-tech/nuxt-native/issues",
   "license": "MIT",
   "type": "module",
   "exports": {
@@ -23,6 +30,7 @@
     "cli",
     "!cli/tests",
     "STYLING.md",
+    "CHANGELOG.md",
     "mcp-server/bin",
     "mcp-server/src",
     "mcp-server/README.md"

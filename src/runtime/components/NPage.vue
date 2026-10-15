@@ -27,6 +27,7 @@
 
 <script setup lang="ts">
 import { computed, useSlots } from 'vue'
+import { isAndroid } from '@nativescript/core'
 import { useSafeArea } from '../composables/useSafeArea'
 import NActionBar from './NActionBar.vue'
 
@@ -54,8 +55,12 @@ const slots = useSlots()
 const actionBarHidden = computed(() => props.hideActionBar ?? (!props.title && !slots.actionBar))
 
 const insets = useSafeArea()
+// On Android a visible ActionBar already sits below the status bar, so
+// adding the top inset again left a status-bar-sized empty band under every
+// titled page (seen on an Android 16 device). iOS is unchanged: it lays out
+// content under its navigation bar differently and hasn't been re-tested.
 const contentStyle = computed(() => ({
-  paddingTop: `${insets.value.top}`,
+  paddingTop: `${isAndroid && !actionBarHidden.value ? 0 : insets.value.top}`,
   paddingBottom: `${insets.value.bottom}`,
   paddingLeft: `${insets.value.left}`,
   paddingRight: `${insets.value.right}`
