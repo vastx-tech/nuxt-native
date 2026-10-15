@@ -4,7 +4,8 @@
     columns="auto"
     :style="containerStyle"
     :isEnabled="!disabled && !loading"
-    @tap="onTap"
+    accessibilityRole="button"
+    v-on="isAndroid ? { loaded: attachNativeClick } : { tap: onTap }"
   >
     <ActivityIndicator v-if="loading" busy="true" :color="palette.text" width="20" height="20" />
     <slot v-else-if="$slots.default" />
@@ -14,6 +15,7 @@
 
 <script setup>
 import { computed } from "vue";
+import { isAndroid, Utils } from "@nativescript/core";
 import { colors, fontSizes, radii, resolveThemeColor, spacing } from "../theme";
 const props = defineProps({
   text: { type: String, required: false, default: "" },
@@ -59,5 +61,22 @@ const labelStyle = computed(() => ({
 function onTap() {
   if (props.disabled || props.loading) return;
   emit("tap");
+}
+let clickListener;
+function attachNativeClick(args) {
+  const nativeView = args.object.nativeViewProtected;
+  if (!nativeView) return;
+  clickListener ??= new android.view.View.OnClickListener({ onClick: () => onTap() });
+  nativeView.setOnClickListener(clickListener);
+  const filled = props.variant !== "outline" && props.variant !== "ghost";
+  const rippleColor = filled ? 872415231 : 31 << 24 | Number.parseInt(colors.primary.slice(1), 16) & 16777215;
+  const mask = new android.graphics.drawable.GradientDrawable();
+  mask.setColor(4294967295 | 0);
+  mask.setCornerRadius(Utils.layout.toDevicePixels(radii.md));
+  nativeView.setForeground(new android.graphics.drawable.RippleDrawable(
+    android.content.res.ColorStateList.valueOf(rippleColor | 0),
+    null,
+    mask
+  ));
 }
 </script>

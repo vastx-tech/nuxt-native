@@ -6,9 +6,9 @@ export interface NButtonProps {
     disabled?: boolean;
     loading?: boolean;
 }
-declare var __VLS_14: {};
+declare var __VLS_10: {};
 type __VLS_Slots = {} & {
-    default?: (props: typeof __VLS_14) => any;
+    default?: (props: typeof __VLS_10) => any;
 };
 declare const __VLS_component: import("vue").DefineComponent<NButtonProps, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {
     tap: () => any;

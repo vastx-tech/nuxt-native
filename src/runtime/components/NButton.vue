@@ -13,6 +13,16 @@
   for composing an icon alongside a label, e.g.
   `<NButton><NFlex class="flex-row items-center"><NSvg .../><NText text="..."/></NFlex></NButton>`,
   which plain `text` can't express since it only ever renders one `<Label>`.
+
+  Taps on Android use a native View.OnClickListener, not NativeScript's
+  @tap: @tap on a plain view goes through Android's GestureDetector with a
+  double-tap listener attached (core's TapAndDoubleTapGestureListener
+  extends SimpleOnGestureListener), which treats a second tap inside the
+  double-tap window as a double tap and never reports it as a tap — so
+  tapping quickly twice only fired once (reported on a device). A native
+  <Button> uses a click listener and doesn't have this problem; now
+  NButton doesn't either, and gets the platform ripple as well. iOS keeps
+  @tap: UIKit's single-tap recognizer fires for every tap.
 -->
 <template>
   <GridLayout
@@ -20,7 +30,8 @@
     columns="auto"
     :style="containerStyle"
     :isEnabled="!disabled && !loading"
-    @tap="onTap"
+    accessibilityRole="button"
+    v-on="isAndroid ? { loaded: attachNativeClick } : { tap: onTap }"
   >
     <ActivityIndicator v-if="loading" busy="true" :color="palette.text" width="20" height="20" />
     <slot v-else-if="$slots.default" />
@@ -30,6 +41,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { isAndroid, Utils } from '@nativescript/core'
+import type { EventData, View } from '@nativescript/core'
 import { colors, fontSizes, radii, resolveThemeColor, spacing, type ThemeColor } from '../theme'
 
 export interface NButtonProps {
@@ -90,5 +103,29 @@ const labelStyle = computed(() => ({
 function onTap() {
   if (props.disabled || props.loading) return
   emit('tap')
+}
+
+// Held here so the Java proxy isn't garbage collected while the view uses it.
+let clickListener: android.view.View.OnClickListener | undefined
+
+/** Android only — see the comment at the top. Runs on every `loaded`, so it survives a native view being recreated. */
+function attachNativeClick(args: EventData) {
+  const nativeView = (args.object as View).nativeViewProtected as android.view.View | undefined
+  if (!nativeView) return
+  clickListener ??= new android.view.View.OnClickListener({ onClick: () => onTap() })
+  nativeView.setOnClickListener(clickListener)
+
+  // Ripple, clipped to the button's rounded corners. Light on filled
+  // buttons, primary-tinted on outline/ghost ones.
+  const filled = props.variant !== 'outline' && props.variant !== 'ghost'
+  const rippleColor = filled ? 0x33FFFFFF : (0x1F << 24) | (Number.parseInt(colors.primary.slice(1), 16) & 0xFFFFFF)
+  const mask = new android.graphics.drawable.GradientDrawable()
+  mask.setColor(0xFFFFFFFF | 0)
+  mask.setCornerRadius(Utils.layout.toDevicePixels(radii.md))
+  nativeView.setForeground(new android.graphics.drawable.RippleDrawable(
+    android.content.res.ColorStateList.valueOf(rippleColor | 0),
+    null,
+    mask
+  ))
 }
 </script>
