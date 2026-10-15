@@ -49,7 +49,18 @@ test('new projects are pinned to this version\'s release tag', () => {
   assert.equal(JSON.parse(packageJson('demo')).dependencies['nuxt-native'], NUXT_NATIVE_DEPENDENCY_SPEC)
 })
 
-test('the real CHANGELOG.md has an Unreleased heading the release script can stamp', () => {
-  const changelog = readFileSync(new URL('../../CHANGELOG.md', import.meta.url), 'utf8').replace(/\r\n/g, '\n')
+test('Windows (CRLF) line endings work and are kept', () => {
+  const crlf = CHANGELOG.replace(/\n/g, '\r\n')
+  assert.equal(unreleasedNotes(crlf), '### Fixed\n\n- A bug.')
+  const stamped = stampChangelog(crlf, '2.1.0', '2026-10-15')
+  assert.match(stamped, /## Unreleased\r\n\r\n## 2\.1\.0 - 2026-10-15\r\n\r\n### Fixed/)
+  assert.doesNotMatch(stamped.replace(/\r\n/g, ''), /\n/, 'no bare LF mixed in')
+})
+
+// Read exactly as checked out — normalizing line endings here first is what
+// hid the CRLF bug the first time.
+test('the real CHANGELOG.md, as checked out, has release notes and can be stamped', () => {
+  const changelog = readFileSync(new URL('../../CHANGELOG.md', import.meta.url), 'utf8')
+  assert.notEqual(unreleasedNotes(changelog), '')
   assert.doesNotThrow(() => stampChangelog(changelog, '9.9.9', '2026-01-01'))
 })

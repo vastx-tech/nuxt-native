@@ -41,16 +41,23 @@ export function nextVersion(current, request) {
   return `${major}.${minor}.${patch + 1}`
 }
 
+// Both take the changelog as it is on disk: a Windows checkout has CRLF
+// line endings (git's autocrlf), which the first version of this script
+// didn't match, so it reported an empty changelog.
+
 /** The text under "## Unreleased", up to the next "## " heading. */
 export function unreleasedNotes(changelog) {
-  const match = /^## Unreleased[ \t]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m.exec(changelog)
+  const text = changelog.replace(/\r\n/g, '\n')
+  const match = /^## Unreleased[ \t]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m.exec(text)
   return match ? match[1].trim() : ''
 }
 
-/** Turns the Unreleased section into "## version - date", leaving an empty Unreleased above it. */
+/** Turns the Unreleased section into "## version - date", leaving an empty Unreleased above it. Keeps the file's line endings. */
 export function stampChangelog(changelog, version, date) {
-  if (!/^## Unreleased[ \t]*$/m.test(changelog)) throw new Error('CHANGELOG.md has no "## Unreleased" heading')
-  return changelog.replace(/^## Unreleased[ \t]*$/m, `## Unreleased\n\n## ${version} - ${date}`)
+  const eol = changelog.includes('\r\n') ? '\r\n' : '\n'
+  const heading = /^## Unreleased[ \t]*(?=\r?$)/m
+  if (!heading.test(changelog)) throw new Error('CHANGELOG.md has no "## Unreleased" heading')
+  return changelog.replace(heading, `## Unreleased${eol}${eol}## ${version} - ${date}`)
 }
 
 function git(...args) {
