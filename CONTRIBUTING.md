@@ -49,3 +49,26 @@ commit. `npm pack --dry-run` checks the package contents without rebuilding.
 The `prepublishOnly` script rebuilds automatically for an npm registry release;
 do not add `prepare`, `prepack`, or a `build` script, because npm runs those
 when installing a Git dependency.
+
+## Releasing
+
+Add a line to `CHANGELOG.md` under "Unreleased" in the same PR as each change
+users will notice. Anything that behaves differently for existing apps goes
+under "Changed". Then, from an up-to-date `main`:
+
+```bash
+npm run release -- minor --dry-run   # checks only; or patch / major / 2.2.0
+npm run release -- minor
+```
+
+The script stops if you're not on `main`, have uncommitted changes, aren't in
+sync with `origin/main`, the tag already exists, or "Unreleased" is empty. It
+runs the tests, lint and `release:build`, sets the version in package.json, moves
+"Unreleased" to a dated heading, then commits `Release vX.Y.Z` (with any rebuilt
+`dist/`), tags it, pushes, and creates the GitHub Release from the changelog. It
+needs the GitHub CLI (`gh`), signed in.
+
+The tag matters beyond GitHub: `create` pins new projects to
+`github:vastx-tech/nuxt-native#v<version in package.json>`, so every version in
+package.json on `main` must have a tag. Only change the version through the
+release script.

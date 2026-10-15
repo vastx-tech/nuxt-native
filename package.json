@@ -1,6 +1,6 @@
 {
   "name": "nuxt-native",
-  "version": "0.1.0",
+  "version": "2.1.0",
   "description": "Build real native Android and iOS apps with Nuxt and Vue — no WebView. A Flutter/React Native-style framework for the Nuxt ecosystem, powered by NativeScript's native runtime. Both platforms are verified on real hardware; see ARCHITECTURE.md for exactly what's been confirmed on-device.",
   "license": "MIT",
   "type": "module",
@@ -30,6 +30,7 @@
   "scripts": {
     "release:build": "node --max-old-space-size=4096 ./node_modules/@nuxt/module-builder/dist/cli.mjs build",
     "prepublishOnly": "npm run release:build",
+    "release": "node scripts/release.mjs",
     "dev": "nuxi dev playground",
     "dev:build": "nuxi build playground",
     "dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxi prepare playground",
@@ -38,7 +39,7 @@
     "native:dev:android": "node ./bin/nuxt-native.mjs dev android",
     "lint": "eslint .",
     "typecheck": "vue-tsc --noEmit",
-    "test": "node --test cli/tests/styling.test.mjs cli/tests/ios-infoplist-fix.test.mjs cli/tests/lighter.test.mjs mcp-server/packaged-cli.test.mjs",
+    "test": "node --test cli/tests/release.test.mjs cli/tests/icons.test.mjs cli/tests/android-theme.test.mjs cli/tests/auto-import-loader.test.mjs cli/tests/styling.test.mjs cli/tests/ios-infoplist-fix.test.mjs cli/tests/lighter.test.mjs mcp-server/packaged-cli.test.mjs",
     "test:mcp": "node --test mcp-server/packaged-cli.test.mjs",
     "test:styling": "node --test cli/tests/styling.test.mjs",
     "test:ios-infoplist": "node --test cli/tests/ios-infoplist-fix.test.mjs"

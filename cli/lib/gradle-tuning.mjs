@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { totalmem } from 'node:os'
+import { spawnSync } from 'node:child_process'
 import { join } from 'node:path'
 
 const MARKER = '# nuxt-native: memory settings tuned for this machine'
@@ -30,7 +31,7 @@ const MARKER = '# nuxt-native: memory settings tuned for this machine'
  * range that's been the Gradle/AGP community's long-standing recommendation
  * for small-to-medium Android projects regardless of how much RAM the
  * machine actually has — there's no real benefit to a NativeScript app's
- * build ever exceeding ~3 GB of Gradle daemon heap, and 768 MB is the
+ * build ever exceeding ~2 GB of Gradle daemon heap, and 768 MB is the
  * floor below which Gradle itself tends to struggle on real projects.
  */
 export function ensureGradleMemorySettings(platformsPath, platforms) {
@@ -65,8 +66,49 @@ export function ensureGradleMemorySettings(platformsPath, platforms) {
   }
 }
 
+// 25% of RAM, at most 2 GB. Was 35% / 3 GB, which still crashed a real
+// 8 GB Windows machine (about 2.5 GB Gradle heap, plus the Kotlin daemon
+// at half that, plus the emulator and editor). A NativeScript app's
+// Gradle build is small; 2 GB is plenty.
 function computeHeapSizeMb() {
   const totalMb = totalmem() / 1024 / 1024
-  const fraction = Math.floor(totalMb * 0.35)
-  return Math.min(3072, Math.max(768, fraction))
+  const fraction = Math.floor(totalMb * 0.25)
+  return Math.min(2048, Math.max(768, fraction))
+}
+
+const LOW_MEMORY_BYTES = 12 * 1024 ** 3
+
+/**
+ * Gradle leaves its daemon running after a build so the next one starts
+ * faster — about 1 GB held indefinitely. On a small machine that's the
+ * difference between a usable desktop and a crash: seen on a real 8 GB
+ * laptop (7.2 GB usable), where an idle daemon left by `nuxt-native build`
+ * held 1.1 GB of committed memory while VS Code and Chrome ran out.
+ *
+ * `native.android.stopGradleDaemon` decides: true always stops it, false
+ * never does, and by default it's stopped on machines under 12 GB of RAM.
+ * The cost is a slower next build (Gradle starts cold, ~10-20 s).
+ *
+ * Synchronous on purpose, so dev's Ctrl+C handler can run it before the
+ * process exits. Output is discarded rather than inherited: under the MCP
+ * server, stdout is the protocol channel (see run.mjs); our own one-line
+ * console.log goes through its capture.
+ */
+export function stopGradleDaemonIfLowMemory(projectRoot, setting, { total = totalmem(), platform = process.platform, spawn = spawnSync } = {}) {
+  const shouldStop = setting ?? total < LOW_MEMORY_BYTES
+  if (!shouldStop) return false
+
+  const androidDir = join(projectRoot, 'platforms', 'android')
+  const wrapper = join(androidDir, platform === 'win32' ? 'gradlew.bat' : 'gradlew')
+  if (!existsSync(wrapper)) return false
+
+  // .bat files need a shell on Windows (Node refuses them without one);
+  // quoted for paths with spaces, since a shell command is one string.
+  const result = platform === 'win32'
+    ? spawn(`"${wrapper}" --stop`, { cwd: androidDir, shell: true, stdio: 'ignore' })
+    : spawn(wrapper, ['--stop'], { cwd: androidDir, stdio: 'ignore' })
+  if (result.status === 0) {
+    console.log('[nuxt-native] Stopped the Gradle daemon to free memory (native.android.stopGradleDaemon: false keeps it running)')
+  }
+  return result.status === 0
 }

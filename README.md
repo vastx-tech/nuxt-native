@@ -54,7 +54,7 @@ tradeoff React Native and Flutter made, applied to the Nuxt/Vue ecosystem.
   composable.
 - **Components** (`<NPage>`, `<NActionBar>`, `<NTabs>`) are thin,
   safe-area-aware wrappers around NativeScript-Vue's native primitives
-  (`<Frame>`, `<ActionBar>`, `<TabStrip>`, ...).
+  (`<Page>`, `<ActionBar>`, ...), plus a tab layout that keeps tabs alive.
 - **A UI kit** (`<NButton>`, `<NText>`, `<NInput>`, `<NCard>`, `<NSwitch>`,
   `<NSpinner>`, `<NAvatar>`, `<NBadge>`, `<NDivider>`, `<NFlex>`,
   `<NContainer>`, `<NetworkImage>`, `<CachedImage>`, `<NSkeleton>`,
@@ -116,10 +116,28 @@ someone else's logo. Verified end-to-end from a clean directory via `npx`;
 the only step it can't do for you is provide an actual Android SDK / Xcode
 install — `ns platform add` will tell you clearly if either is missing.
 
+### Versions and updating
+
+Each release is a git tag (`v2.1.0`, ...) with notes on the
+[releases page](https://github.com/vastx-tech/nuxt-native/releases) and in
+[CHANGELOG.md](./CHANGELOG.md). `create` pins new projects to the release that
+created them: their package.json gets
+`"nuxt-native": "github:vastx-tech/nuxt-native#v2.1.0"`, so every machine builds
+with the same framework code. To update, change the tag and reinstall:
+
+```bash
+npm install github:vastx-tech/nuxt-native#v2.2.0
+npx nuxt-native init   # re-applies generated config for the new version
+```
+
+Check CHANGELOG.md's "Changed" section first; it lists anything that behaves
+differently. Installing without a tag (`github:vastx-tech/nuxt-native`) follows
+`main`, which can change on any merge.
+
 Adding it to an **existing** Nuxt project instead:
 
 ```bash
-npm install github:vastx-tech/nuxt-native nativescript-vue @nativescript/core
+npm install github:vastx-tech/nuxt-native#v2.1.0 nativescript-vue @nativescript/core
 ```
 
 ```ts
@@ -140,9 +158,37 @@ npx nuxt-native dev android
 ```
 
 Write pages under `app/pages/` using NativeScript-Vue's native elements —
-`<Frame>`, `<StackLayout>`, `<Label>`, `<Button>`, `<TabStrip>` — instead of
-HTML. `<NPage>`, `<NActionBar>`, and `<NTabs>` wrap the common ones with
+`<Frame>`, `<StackLayout>`, `<Label>`, `<Button>` — instead of HTML.
+`<NPage>`, `<NActionBar>`, and `<NTabs>` wrap the common ones with
 sensible defaults. See [`playground/`](./playground) for a working example.
+
+`npm run typecheck` (in projects created with `create`) runs `vue-tsc`
+against your pages, including the types nuxt-native generates for
+auto-imports and its `N*` components. In an existing project, add
+`vue-tsc` and the same script yourself.
+
+### Android theme and minimum version
+
+```ts
+native: {
+  theme: { background: '#0B1020', primary: '#7C5CFF', accent: '#22D3EE' },
+  android: { minSdk: 23 }
+}
+```
+
+- `theme.background` becomes the Android window background and status bar
+  colour. Without it, Android's window stays white, and a dark app shows
+  a white flash on every page transition. A dark background also switches
+  the system theme (dialogs, pickers) to dark; a light one gets dark
+  status bar icons. `primary` (toolbar, default: `background`) and
+  `accent` (widgets) are optional. The files are generated into
+  `App_Resources/Android/src/main/res/values*/` on every build. A file
+  there that you wrote yourself is left alone, with a warning. iOS isn't
+  affected, and neither are the `N*` components' colours, which still come
+  from `nuxt-native/runtime/theme`.
+- `android.minSdk` defaults to 23 (Android 6.0). NativeScript's own default
+  is 21, which current Google Play services and Firebase libraries no
+  longer support.
 
 ## UI kit
 
@@ -227,6 +273,52 @@ real `$showModal` — your content component can dismiss itself by importing
   `animation-name`), looping via the confirmed-real
   `iterations: Number.POSITIVE_INFINITY`, and stopped cleanly on unmount
   via the animation promise's own `.cancel()`.
+
+### Tabs
+
+```vue
+<template>
+  <NPage :scrollable="false">
+    <NTabs v-model="tab" :tabs="tabs">
+      <template #explore><ExploreTab /></template>
+      <template #saved><SavedTab /></template>
+      <template #profile><ProfileTab /></template>
+    </NTabs>
+  </NPage>
+</template>
+
+<script setup lang="ts">
+const tab = ref('explore')
+const tabs = [
+  { name: 'explore', title: 'Explore', icon: 'res://ic_explore' },
+  { name: 'saved', title: 'Saved', icon: 'res://ic_saved' },
+  { name: 'profile', title: 'Profile', icon: 'res://ic_profile' }
+]
+</script>
+```
+
+Don't switch tabs by navigating between pages. Every navigation builds a
+new page, which took 600–800 ms per switch in one real app. `<NTabs>` keeps
+every tab alive instead: each tab's content is built the first time it's
+opened, then stays attached, and switching only changes which tab is
+visible. Scroll position, form input and loaded data are kept.
+
+- Put `<NTabs>` in a page with `:scrollable="false"`, and add a
+  `<ScrollView>` inside each tab that needs one.
+- On Android, the back button returns to the first tab before leaving the
+  page (`:back-to-first="false"` turns this off). It only applies while the
+  tabs page is on screen. A detail page opened from a tab with
+  `useNativeRouter().navigate()` covers the tabs, and going back returns to
+  them unchanged.
+- Props: `position` (`'bottom'`, the default, or `'top'`), `lazy`
+  (default `true`; `false` builds every tab at startup), and
+  `active-color` / `inactive-color` / `bar-color`. The `change` event
+  receives `(name, index)`.
+- To customise the tab buttons (an `<NSvg>` icon, a badge), use the `tab`
+  slot: `<template #tab="{ tab, active }">`.
+- It isn't built on NativeScript's `TabView`. On Android with bottom tabs,
+  `TabView` rebuilds the native views of any tab more than one position
+  from the selected one each time you return to it.
 
 ### Tailwind
 
@@ -375,16 +467,15 @@ export const useCounterStore = defineStore('counter', () => {
 </template>
 
 <script setup lang="ts">
-import { useCounterStore } from '../stores/counter'
-const counter = useCounterStore()
+const counter = useCounterStore() // auto-imported from app/stores/
 </script>
 ```
 
 `nuxt-native init`/`create` detects a `pinia` dependency and wires
 `createApp(RootFrame).use(createPinia())` into the generated bootstrap
-automatically — nothing else to configure. Stores are plain Pinia, explicitly
-imported the same way composables are today (see the auto-imports note
-above) — no special nuxt-native API. This works because Pinia's core is
+automatically — nothing else to configure. Stores are plain Pinia,
+auto-imported from `app/stores/` the same way composables are (see
+Auto-imports below) — no special nuxt-native API. This works because Pinia's core is
 pure Vue reactivity with no DOM dependency at all (checked directly against
 its actual dist output, not assumed), and every DOM/devtools-only code path
 it has is gated behind a `typeof window !== 'undefined'` check that's
@@ -399,6 +490,38 @@ runs at all (it's a separate NativeScript webpack pipeline end to end), or
 assume a DOM/SSR context that doesn't exist here. Pinia works because its
 actual logic has neither dependency; before adding another module, check
 whether the same is true for it.
+
+### Saving state on the device
+
+There's no `localStorage` in a native app. Two built-in replacements, both
+saved with NativeScript's `ApplicationSettings` (SharedPreferences on
+Android, NSUserDefaults on iOS), so they suit settings and small state
+rather than large data sets:
+
+```ts
+// A ref that's saved on change and restored at startup (auto-imported)
+const theme = useStorage('theme', 'system')
+const recent = useStorage<string[]>('recent-searches', [])
+recent.value.push('tokyo')  // deep changes are saved too
+recent.value = undefined    // removes it; the ref goes back to the default
+```
+
+```ts
+// A whole Pinia store, restored when the app starts
+export const useCartStore = defineStore('cart', () => { /* ... */ }, { persist: true })
+// or only some of its state, under a key of your choosing
+defineStore('auth', { state: () => ({ token: '', draft: '' }), persist: { pick: ['token'], key: 'auth' } })
+```
+
+- `useStorage` returns the same ref for the same key everywhere in the app.
+- Values are stored as JSON: use plain data. Dates come back as strings,
+  and class instances come back as plain objects.
+- `persist` is handled by a Pinia plugin that the generated app entry
+  registers whenever `pinia` is installed. It only affects stores that set
+  `persist`, and the option is typed in the generated
+  `.nuxt-native/auto-imports.d.ts`.
+- Neither is encrypted: don't store secrets you'd keep out of
+  SharedPreferences/NSUserDefaults.
 
 ## MCP client (`useMcpClient()`)
 
@@ -592,14 +715,20 @@ entire machine's physical memory, and a very plausible cause of otherwise
 mysterious build flakiness (Windows can fail to spawn new processes under
 severe memory pressure).
 
-The replacement is computed from the machine's actual total RAM (35% of
-it, clamped to 768 MB–3 GB — there's no real benefit to a NativeScript
-app's build ever exceeding ~3 GB of daemon heap), plus `kotlin.daemon.jvmargs`
+The replacement is computed from the machine's actual total RAM (25% of
+it, clamped to 768 MB–2 GB — there's no real benefit to a NativeScript
+app's build ever exceeding ~2 GB of daemon heap), plus `kotlin.daemon.jvmargs`
 and `org.gradle.workers.max=2` to cap the other JVMs Gradle spins up. It's
 written once (marked with a comment so reruns don't clobber a value you've
 since customized yourself) and never touches the file again after that.
 Verified with a real, full clean rebuild after applying it — succeeded
 identically with a fraction of the memory.
+
+The limit used to be 35% / 3 GB, which still crashed an 8 GB Windows
+machine. Projects tuned before that keep their old value: edit
+`org.gradle.jvmargs` in `platforms/android/gradle.properties`, or delete the
+`# nuxt-native: memory settings tuned` line there and the next build re-tunes
+it.
 
 The generated `webpack.config.cjs` gets the same treatment for
 `ForkTsCheckerWebpackPlugin` (a separate Node process `@nativescript/webpack`
@@ -627,25 +756,35 @@ const { connected } = useWebSocket('wss://your-server.example.com/socket')
 This isn't Nuxt's own `unimport`/auto-import machinery running under the
 hood (that package is ESM-only, and the native build's `webpack.config.cjs`
 is loaded with a plain synchronous `require()` that can't consume it) — it's
-a small first-party webpack loader that does the same thing: a fast scan for
-composable names actually used in a file, skipping anything already
-imported or declared locally, then injecting the right import. Regenerated
-automatically on every `init`/`dev`/`build`, so a composable you add to
-`app/composables/` is picked up on the very next run.
+a small first-party webpack loader that does the same thing using Vue's own
+compiler: it finds the names a file's script and template actually
+reference, skips anything the file already imports, declares, or receives
+as a prop, and injects the right import into `<script setup>`. Regenerated
+automatically on every `init`/`dev`/`build`, so a file you add to
+`app/composables/` or `app/utils/` is picked up on the very next run.
 
-Two real limitations, worth knowing:
+What gets auto-imported, and how names are resolved:
 
+- Every value export of every file in `app/composables/`, `app/utils/` and
+  `app/stores/` (Pinia stores, as with `@pinia/nuxt`),
+  read from the file itself — a `motion.ts` exporting `fadeIn` and
+  `slideUp` gives you both, and the filename doesn't matter. A default
+  export is available under the file's name. Type-only exports and
+  `export * from` re-exports are not included.
+- Names used only in `<template>` work too, at runtime and in
+  `vue-tsc`/your editor.
+- **Your component's own names always win.** A prop, local variable or
+  import named `size`, `placeholder`, `padding`, etc. is never replaced by
+  the auto-imported helper of the same name. If your `<script setup>` calls
+  a helper that a prop of the same component also names, the build fails
+  with a message asking you to import it explicitly under another name,
+  rather than guessing which one you meant.
 - Only composables/utils are covered, not your own custom `.vue`
   components — those still need a normal explicit import (auto-importing
   components is a different mechanism in real Nuxt, not this one).
-- `vue-tsc`/your editor's TS server will still flag a name that's used
-  **only** inside `<template>` and never referenced in `<script>` — Vue's
-  compiler determines a template's available bindings from the script
-  block's own code, not from the ambient types that make `vue-tsc` aware
-  of auto-imports elsewhere. The actual build is unaffected either way;
-  if you see this, reference the name once in `<script>` instead (a
-  `computed()` is usually the natural fix, and is better practice than an
-  inline template call regardless — it's cached, not re-run every render).
+- A component without `<script setup>` can't receive template-only
+  auto-imports (a plain `<script>` block's imports aren't visible to its
+  template); the build warns when that happens.
 
 ## Plugins
 

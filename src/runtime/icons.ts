@@ -36,12 +36,38 @@ export interface ResolveIconSvgOptions {
  * way those integrations add it themselves.
  */
 export function resolveIconSvg(iconSet: IconifyJSON, name: string, options: ResolveIconSvgOptions = {}): string {
+  // Memoized per icon set: the same icon is usually rendered many times
+  // (every row of a list), and the markup only depends on these inputs.
+  let cached = cache.get(iconSet)
+  if (!cached) cache.set(iconSet, cached = new Map())
+  const key = `${name}|${options.color ?? ''}|${options.width ?? ''}|${options.height ?? ''}`
+  const hit = cached.get(key)
+  if (hit) return hit
+
+  const svg = buildIconSvg(iconSet, name, options)
+  cached.set(key, svg)
+  return svg
+}
+
+const cache = new WeakMap<IconifyJSON, Map<string, string>>()
+
+function buildIconSvg(iconSet: IconifyJSON, name: string, options: ResolveIconSvgOptions): string {
   const iconData = getIconData(iconSet, name)
   if (!iconData) {
     throw new Error(`[nuxt-native] Icon "${name}" was not found in the given icon set.`)
   }
 
-  const { attributes, body } = iconToSVG(iconData, { width: options.width, height: options.height })
+  // Never pass `undefined`: it replaces iconToSVG's own default and makes
+  // it throw ("reading 'toString'"), which broke every call without a
+  // size. With one size given, iconToSVG derives the other from the
+  // icon's aspect ratio; with none, 'auto' = the icon's own size in plain
+  // numbers (e.g. 24x24) rather than iconToSVG's default of `1em`, a unit
+  // native SVG renderers have no font size to resolve against.
+  const size: { width?: number | 'auto', height?: number | 'auto' } = {}
+  if (options.width !== undefined) size.width = options.width
+  if (options.height !== undefined) size.height = options.height
+  if (options.width === undefined && options.height === undefined) size.width = size.height = 'auto'
+  const { attributes, body } = iconToSVG(iconData, size)
   const resolvedBody = options.color ? body.replace(/currentColor/g, options.color) : body
   const attrString = Object.entries(attributes)
     .filter(([, value]) => value !== undefined)

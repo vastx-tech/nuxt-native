@@ -77,3 +77,51 @@ Review screens which compensated with unusually large spacing values.
 When diagnosing spacing, inspect the parent layout, gap, child margins, component
 inline styles, and safe-area padding before adding more classes. Verify the screen
 on the target device; a successful CSS compile is not a visual layout test.
+
+## Android layout pitfalls
+
+Reported by developers building real apps on Android. Check these first when a
+screen behaves differently on the device than you expect.
+
+- Nested taps fire twice. A @tap on a view inside another view that also has @tap
+  runs both handlers; NativeScript has no stopPropagation. Keep tappable areas from
+  nesting (put the outer handler on a sibling layer behind the content), or have the
+  outer handler ignore a tap the inner one has just handled.
+- A quick second tap on a plain view is dropped. @tap on a layout or Label goes
+  through Android's double-tap detection, which swallows a second tap within about
+  300 ms. Use NButton (or the native Button) for anything users tap repeatedly, such
+  as counters and steppers; both use Android's click listener and count every tap.
+- Keep one stable child in a ScrollView. A ScrollView holds exactly one view, and
+  replacing that child (v-if/v-else or a changing :key directly under the
+  ScrollView) has crashed Android. Put one layout directly inside the ScrollView and
+  switch content inside that layout. NPage already does this for its content.
+- Prefer visibility to v-if for content that changes while a page is being shown.
+  Views added by v-if during navigation or the first layout pass have rendered
+  incorrectly. Toggle visibility ('visible' / 'collapse') on views that already
+  exist instead; NTabs works this way.
+- Avoid percentage widths inside a centred flex column. A child with a % width in an
+  NFlex column with items-center has rendered wider than its box (rounded buttons
+  overflowing their outline). Give it a fixed width, or let it stretch (self-stretch)
+  and use horizontal margins.
+- SVG icons are parsed natively every time a view is created. <NSvg> passes markup
+  to @nativescript-community/ui-svg, which re-parses it for each view, and offers no
+  way to reuse a parsed icon. resolveIconSvg() caches the markup, but for an icon
+  repeated down a long list, prefer a PNG or font icon (res://...), or keep the
+  views alive (NTabs, ListView's recycling) rather than recreating them.
+
+## Debugging release builds
+
+Release builds remove every console.* call (@nativescript/webpack sets terser's
+drop_console in production), so logging that worked in debug prints nothing.
+
+- Measure frame times on the device instead: adb shell dumpsys gfxinfo <appId>
+  reports rendered frames and janky frames (add reset to start a new measurement).
+- To keep console output in a release build while you investigate, add this to
+  webpack.config.cjs before return webpack.resolveConfig(), and remove it afterwards:
+
+    webpack.chainWebpack((config) => {
+      config.optimization.minimizer('TerserPlugin').tap((args) => {
+        args[0].terserOptions.compress.drop_console = false
+        return args
+      })
+    })

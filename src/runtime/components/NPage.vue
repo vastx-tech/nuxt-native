@@ -30,8 +30,13 @@ import { computed, useSlots } from 'vue'
 import { useSafeArea } from '../composables/useSafeArea'
 import NActionBar from './NActionBar.vue'
 
+// `hideActionBar: undefined` is deliberate: Vue casts an absent Boolean prop
+// with no default to `false`, which made the `??` below always pick it and
+// show the ActionBar on every page without a title (seen on a device: an
+// empty toolbar labelled with the app name above an untitled page).
 const props = withDefaults(defineProps<{ title?: string, scrollable?: boolean, hideActionBar?: boolean }>(), {
-  scrollable: true
+  scrollable: true,
+  hideActionBar: undefined
 })
 
 const slots = useSlots()

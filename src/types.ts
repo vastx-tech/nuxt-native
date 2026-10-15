@@ -25,6 +25,29 @@ export interface NuxtNativeOptions {
    * alone — not every plugin needs native dependency/permission wiring.
    */
   plugins: string[]
+  /**
+   * Android app theme, generated into App_Resources/Android/src/main/res
+   * on every init/dev/build. Hex colours (#RRGGBB). Without it, the
+   * NativeScript template's light theme applies.
+   */
+  theme?: {
+    /** Window background and status bar. A dark one also switches to the dark system theme. */
+    background: string
+    /** Toolbar (ActionBar) colour. Default: `background`. */
+    primary?: string
+    /** Accent for system widgets. Default: `primary`. */
+    accent?: string
+  }
+  android?: {
+    /** Minimum Android API level. Default 23 (Android 6.0). */
+    minSdk?: number
+    /**
+     * Stop Gradle's background daemon after `build`/`analyze` and when
+     * `dev` exits, freeing about 1 GB. Default: only on machines with less
+     * than 12 GB of RAM. Keeping it makes the next build start faster.
+     */
+    stopGradleDaemon?: boolean
+  }
 }
 
 declare module '@nuxt/schema' {

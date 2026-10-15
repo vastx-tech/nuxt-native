@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import { join } from 'node:path'
 
 // Ambient, module-level capture buffer — null in normal CLI use, meaning
 // run() inherits stdio exactly as before (real terminal, real live output).
@@ -58,6 +59,7 @@ export function run(command, args, options = {}) {
     const child = spawn(command, args, {
       stdio: buf ? ['ignore', 'pipe', 'pipe'] : 'inherit',
       shell: process.platform === 'win32',
+      env: childEnv(options.cwd ?? process.cwd()),
       ...options
     })
 
@@ -72,4 +74,22 @@ export function run(command, args, options = {}) {
       else reject(new Error(`${command} ${args.join(' ')} exited with code ${code}`))
     })
   })
+}
+
+/**
+ * The NativeScript CLI starts Gradle as a bare `gradlew.bat` with
+ * platforms/android as its working directory, relying on Windows' cmd
+ * finding programs in the current directory. With the
+ * NoDefaultCurrentDirectoryInExePath environment variable set (AI coding
+ * agents and some hardened Windows setups set it), cmd doesn't, and the
+ * build fails with "'gradlew.bat' is not recognized" — reported by an
+ * external developer as "Gradle wasn't found unless I added it to PATH",
+ * and reproduced here. Putting the project's own platforms/android on
+ * PATH for the child process finds the same wrapper, without re-enabling
+ * current-directory lookup for anything else.
+ */
+export function childEnv(cwd, env = process.env, platform = process.platform) {
+  if (platform !== 'win32' || !env.NoDefaultCurrentDirectoryInExePath) return env
+  const pathKey = Object.keys(env).find(key => key.toUpperCase() === 'PATH') ?? 'Path'
+  return { ...env, [pathKey]: `${join(cwd, 'platforms', 'android')};${env[pathKey] ?? ''}` }
 }

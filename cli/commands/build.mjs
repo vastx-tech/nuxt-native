@@ -2,6 +2,7 @@ import { generateEntry } from '../lib/generate-entry.mjs'
 import { loadNativeConfig } from '../lib/load-config.mjs'
 import { ensureProjectSetup } from '../lib/ensure-project-setup.mjs'
 import { run } from '../lib/run.mjs'
+import { stopGradleDaemonIfLowMemory } from '../lib/gradle-tuning.mjs'
 
 /**
  * `nsArgs` is forwarded verbatim to `ns build` — e.g. `--release
@@ -35,7 +36,11 @@ export async function build(platform, nsArgs = []) {
   }
 
   console.log(`[nuxt-native] ns build ${platform} ${finalArgs.join(' ')}`.trimEnd())
-  await run('npx', ['--yes', 'nativescript', 'build', platform, ...finalArgs])
+  try {
+    await run('npx', ['--yes', 'nativescript', 'build', platform, ...finalArgs])
+  } finally {
+    if (platform === 'android') stopGradleDaemonIfLowMemory(process.cwd(), config.android?.stopGradleDaemon)
+  }
 }
 
 /**
