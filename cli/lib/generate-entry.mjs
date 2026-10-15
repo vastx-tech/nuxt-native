@@ -246,13 +246,15 @@ function renderAppEntry({ components = RUNTIME_COMPONENTS, usePinia, useUiSvg } 
 
   return `import { createApp } from 'nativescript-vue'
 import { applyLabelClippingFix } from 'nuxt-native/runtime/label-clipping-fix.js'
+import { vTap } from 'nuxt-native/runtime/native-tap.js'
 ${piniaImport}${uiSvgImport}import RootFrame from './root-frame.vue'
 ${imports}
 
 applyLabelClippingFix()
 
 createApp(RootFrame)
-${piniaUse}${uiSvgRegister}${registrations}
+${piniaUse}${uiSvgRegister}  .directive('tap', vTap)
+${registrations}
   .start()
 `
 }

@@ -274,6 +274,29 @@ real `$showModal` — your content component can dismiss itself by importing
   `iterations: Number.POSITIVE_INFINITY`, and stopped cleanly on unmount
   via the animation promise's own `.cancel()`.
 
+### Taps that count every tap
+
+On Android, `@tap` on a layout, label or card drops a quick second tap: it goes
+through Android's double-tap detection, which treats a tap within about 300 ms of
+the previous one as part of a double tap. Use `v-tap` instead of `@tap` on
+anything people tap repeatedly:
+
+```vue
+<StackLayout v-tap="() => quantity++" class="p-4">
+  <Label :text="`Quantity: ${quantity}`" />
+</StackLayout>
+```
+
+- It uses Android's click listener, like a native `<Button>`, so every tap counts.
+  It also adds the standard Android ripple, clipped to the view's rounded
+  corners; `v-tap.noripple` leaves the ripple out.
+- On iOS it's the same as `@tap`, which already counts every tap there.
+- `<NButton>` works this way already.
+- Use `v-tap` or `@tap` on an element, not both.
+- Taps that navigate (opening a detail page) may be better left on `@tap`: with
+  `v-tap`, a quick double tap opens the page twice, as it would with a native
+  button.
+
 ### Tabs
 
 ```vue
