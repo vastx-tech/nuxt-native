@@ -68,6 +68,10 @@ runs the tests, lint and `release:build`, sets the version in package.json, move
 `dist/`), tags it, pushes, and creates the GitHub Release from the changelog. It
 needs the GitHub CLI (`gh`), signed in.
 
+Add `--npm` to also publish to the npm registry (`npm login` first). The
+script checks the login and that the version isn't on npm yet before it
+changes anything.
+
 The tag matters beyond GitHub: `create` pins new projects to
 `github:vastx-tech/nuxt-native#v<version in package.json>`, so every version in
 package.json on `main` must have a tag. Only change the version through the

@@ -1,35 +1,58 @@
 # Nuxt Native
 
-**[Docs & landing page →](https://nuxt-native.vastx.in)**
+**Real native Android and iOS apps, written the Nuxt way.** File-based pages,
+auto-imports and Vue single-file components, rendered as genuine native views:
+no WebView, no DOM.
 
-Build real native Android and iOS apps with Nuxt and Vue — no WebView, no
-DOM. Vue components render as actual native views (`UIView` /
-`android.view.View`), the same way React Native components render as real
-native views instead of HTML. Nuxt Native brings Nuxt's developer
-experience — file-based pages, auto-imported composables/components/style
-helpers, a single module system — to that model, built on
-[NativeScript](https://nativescript.org)'s native runtime rather than
-reinventing one from scratch.
+[![Release](https://img.shields.io/github/v/release/vastx-tech/nuxt-native)](https://github.com/vastx-tech/nuxt-native/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-> **Status: early / pre-alpha. Both platforms are now verified on real
-> hardware.** The `create` command has taken a project from an empty
-> folder to a rendering app on physical Android hardware, repeatedly — the
-> module, composables, the typed style-object system, the UI kit,
-> auto-imports (composables/utils reach the real on-device bundle, not
-> just the editor), the CLI (release signing, a doctor command, a bundle
-> analyzer), and the native build pipeline it hands off to all work
-> together end to end, confirmed on-device. iOS verification started more
-> recently, on a real physical device (no simulator): install, launch,
-> full-screen rendering, safe-area layout, and tap/gesture responsiveness
-> are all confirmed working after fixing several real bugs surfaced along
-> the way (a broken `Info.plist` scaffold, a missing launch-screen
-> reference, an async navigation-timing race, a unit-conversion bug) — see
-> [ARCHITECTURE.md](./ARCHITECTURE.md) for the full trail. Not every iOS
-> code path has been exercised yet this way (`useWebSocket()`'s iOS half
-> is still unverified, for instance — see its own section below); treat
-> "confirmed" claims in this README and ARCHITECTURE.md as the precise
-> boundary of what's actually been run on a device, not a blanket
-> per-platform guarantee.
+**[Docs & landing page](https://nuxt-native.vastx.in)** ·
+**[Quickstart](#quickstart)** ·
+**[Changelog](./CHANGELOG.md)**
+
+<!-- SCREENSHOTS -->
+
+```vue
+<!-- app/pages/index.vue: this is a real native screen -->
+<template>
+  <NPage title="Counter">
+    <StackLayout :style="{ padding: 24 }">
+      <NText :text="`Tapped ${count} times`" variant="h2" :style="{ marginBottom: 16 }" />
+      <NButton text="Tap me" @tap="count++" />
+    </StackLayout>
+  </NPage>
+</template>
+
+<script setup lang="ts">
+// Auto-imported, and saved on the device between launches
+const count = useStorage('count', 0)
+</script>
+```
+
+```bash
+npx nuxt-native@latest create my-app --app-id com.example.myapp
+cd my-app
+npx nuxt-native dev android   # or: ios
+```
+
+**What you get**
+
+- **Native UI, not a web page.** Vue renders straight to `android.view.View` /
+  `UIView`, like React Native, so apps scroll and feel native. Built on
+  [NativeScript](https://nativescript.org)'s proven runtime.
+- **Nuxt's developer experience.** `app/pages/` routing, auto-imported
+  composables, utils and Pinia stores, TypeScript and `vue-tsc` throughout.
+- **Batteries included.** A themeable UI kit (`NButton`, `NCard`, `NInput`, ...),
+  tabs that stay alive, `useStorage` and persisted Pinia stores, device APIs
+  (camera, location, WebSocket), and optional Tailwind.
+- **A CLI that does the setup.** `create` gives you a running app, `doctor`
+  finds misconfigurations, and `build android --release` signs your APK.
+
+**Status:** early, and moving fast. A developer has built a production Android
+app with it, and [2.1.0](./CHANGELOG.md) shipped the fixes they asked for. Android
+is tested on real devices; iOS runs on real hardware but has had less testing.
+[ARCHITECTURE.md](./ARCHITECTURE.md) records exactly what has been verified and how.
 
 ## Why not Capacitor / a WebView?
 
@@ -91,17 +114,11 @@ tradeoff React Native and Flutter made, applied to the Nuxt/Vue ecosystem.
 
 ## Quickstart
 
-> **Not on npm yet.** `nuxt-native` hasn't been published to the npm
-> registry, so every command below installs straight from this repo
-> instead — `npm install nuxt-native` on its own will 404 (or worse,
-> install an unrelated package if that name is ever taken by someone
-> else).
-
 One command, empty directory to a project with dependencies installed and
 native platforms wired up:
 
 ```bash
-npx github:vastx-tech/nuxt-native create my-app --app-id com.example.myapp
+npx nuxt-native@latest create my-app --app-id com.example.myapp
 cd my-app
 npx nuxt-native dev android   # or: ios
 ```
@@ -118,7 +135,8 @@ install — `ns platform add` will tell you clearly if either is missing.
 
 ### Versions and updating
 
-Each release is a git tag (`v2.1.0`, ...) with notes on the
+Each release is published to [npm](https://www.npmjs.com/package/nuxt-native)
+and tagged on GitHub (`v2.2.1`, ...), with notes on the
 [releases page](https://github.com/vastx-tech/nuxt-native/releases) and in
 [CHANGELOG.md](./CHANGELOG.md). `create` pins new projects to the release that
 created them: their package.json gets
@@ -126,7 +144,7 @@ created them: their package.json gets
 with the same framework code. To update, change the tag and reinstall:
 
 ```bash
-npm install github:vastx-tech/nuxt-native#v2.2.0
+npm install github:vastx-tech/nuxt-native#v2.2.1   # or, from npm: npm install nuxt-native@2.2.1
 npx nuxt-native init   # re-applies generated config for the new version
 ```
 
@@ -137,7 +155,7 @@ differently. Installing without a tag (`github:vastx-tech/nuxt-native`) follows
 Adding it to an **existing** Nuxt project instead:
 
 ```bash
-npm install github:vastx-tech/nuxt-native#v2.1.0 nativescript-vue @nativescript/core
+npm install nuxt-native nativescript-vue @nativescript/core
 ```
 
 ```ts

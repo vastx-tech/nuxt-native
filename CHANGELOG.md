@@ -6,6 +6,23 @@ whatever is on `main` when you install.
 
 ## Unreleased
 
+### Added
+
+- nuxt-native is on npm: `npx nuxt-native@latest create my-app`, or
+  `npm install nuxt-native` in an existing Nuxt project.
+
+### Fixed
+
+- On Android, pages with a title no longer have an empty band the height of the
+  status bar between the toolbar and the content.
+- `dist/module.json` reports the right version. 2.2.0 said 2.1.0 there.
+
+### Changed
+
+- The README now opens with screenshots, a code sample and a three-line quickstart.
+- package.json has npm metadata (repository, homepage, keywords), and the package
+  includes CHANGELOG.md, ready for publishing to npm.
+
 ## 2.2.0 - 2026-10-15
 
 ### Added

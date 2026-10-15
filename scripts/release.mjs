@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * Releases nuxt-native: `npm run release -- <version|patch|minor|major> [--dry-run]`.
+ * Releases nuxt-native: `npm run release -- <version|patch|minor|major> [--npm] [--dry-run]`.
  *
- * nuxt-native isn't on npm; people install it from GitHub. A release is a
- * git tag (vX.Y.Z) plus a GitHub Release, so a project can pin
- * `github:vastx-tech/nuxt-native#vX.Y.Z` and `create` can scaffold new
- * projects pinned to the release that created them.
+ * A release is a git tag (vX.Y.Z) plus a GitHub Release, so a project can
+ * pin `github:vastx-tech/nuxt-native#vX.Y.Z` and `create` can scaffold new
+ * projects pinned to the release that created them. With --npm it's also
+ * published to the npm registry.
  *
  * Steps, stopping at the first failure:
  *  1. check: on main, no uncommitted changes, up to date with origin/main,
@@ -16,6 +16,9 @@
  *     a dated heading for this version
  *  4. commit "Release vX.Y.Z" (including any rebuilt dist/), tag it, push
  *     main and the tag, and create the GitHub Release from the changelog
+ *  5. with --npm, `npm publish` it. Checked up front with the rest: you must
+ *     be logged in (`npm login`) and the version must not be on npm yet, so
+ *     a missing login can't leave a release half-done.
  *
  * --dry-run runs the checks and prints the plan without changing anything.
  */
@@ -72,6 +75,12 @@ function step(label, command, args) {
   if (result.status !== 0) throw new Error(`${label} failed`)
 }
 
+/** Runs an npm command quietly; its trimmed stdout, or '' if it failed. */
+function npmQuiet(args) {
+  const result = spawnSync('npm', args, { cwd: ROOT, encoding: 'utf8', shell: process.platform === 'win32' })
+  return result.status === 0 ? result.stdout.trim() : ''
+}
+
 function fail(message) {
   console.error(`\n[release] ${message}`)
   process.exit(1)
@@ -80,6 +89,7 @@ function fail(message) {
 async function main() {
   const args = process.argv.slice(2)
   const dryRun = args.includes('--dry-run')
+  const toNpm = args.includes('--npm')
   const request = args.find(arg => !arg.startsWith('--'))
 
   const pkgPath = join(ROOT, 'package.json')
@@ -99,21 +109,26 @@ async function main() {
   if (branch === 'main' && git('rev-parse', 'HEAD') !== git('rev-parse', 'origin/main')) problems.push('main differs from origin/main (pull or push first)')
   if (git('tag', '--list', tag)) problems.push(`tag ${tag} already exists`)
   if (!notes) problems.push('CHANGELOG.md has nothing under "## Unreleased"')
+  if (toNpm) {
+    if (!npmQuiet(['whoami'])) problems.push('--npm: not logged in to npm (run `npm login` first)')
+    if (npmQuiet(['view', `nuxt-native@${version}`, 'version']) === version) problems.push(`--npm: nuxt-native@${version} is already on npm`)
+  }
 
   console.log(`[release] ${current} -> ${version} (tag ${tag})`)
   console.log(`[release] notes:\n\n${notes || '(none)'}\n`)
   if (problems.length) fail(`can't release yet:\n  - ${problems.join('\n  - ')}`)
   if (dryRun) {
-    console.log('[release] dry run: checks passed; would test, lint, build, bump, commit, tag, push and create the GitHub Release.')
+    console.log(`[release] dry run: checks passed; would test, lint, build, bump, commit, tag, push and create the GitHub Release${toNpm ? ', then publish to npm' : ''}.`)
     return
   }
 
   step('tests', 'npm', ['test'])
   step('lint', 'npm', ['run', 'lint'])
-  step('build dist', 'npm', ['run', 'release:build'])
-
+  // Bump before building: the build copies the version into
+  // dist/module.json (2.2.0 shipped saying 2.1.0 there, built first).
   if (version !== current) writeFileSync(pkgPath, pkgText.replace(`"version": "${current}"`, `"version": "${version}"`))
   writeFileSync(changelogPath, stampChangelog(changelog, version, new Date().toISOString().slice(0, 10)))
+  step('build dist', 'npm', ['run', 'release:build'])
 
   git('add', 'package.json', 'CHANGELOG.md', 'dist')
   git('commit', '-m', `Release ${tag}`)
@@ -127,7 +142,8 @@ async function main() {
   } finally {
     rmSync(notesDir, { recursive: true, force: true })
   }
-  console.log(`\n[release] done: ${tag}. Projects can pin "nuxt-native": "github:vastx-tech/nuxt-native#${tag}".`)
+  if (toNpm) step('npm publish', 'npm', ['publish', '--access', 'public'])
+  console.log(`\n[release] done: ${tag}. Projects can pin "nuxt-native": "github:vastx-tech/nuxt-native#${tag}"${toNpm ? ` or "^${version}" from npm` : ''}.`)
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {

@@ -27,6 +27,7 @@
 
 <script setup>
 import { computed, useSlots } from "vue";
+import { isAndroid } from "@nativescript/core";
 import { useSafeArea } from "../composables/useSafeArea";
 import NActionBar from "./NActionBar.vue";
 const props = defineProps({
@@ -38,7 +39,7 @@ const slots = useSlots();
 const actionBarHidden = computed(() => props.hideActionBar ?? (!props.title && !slots.actionBar));
 const insets = useSafeArea();
 const contentStyle = computed(() => ({
-  paddingTop: `${insets.value.top}`,
+  paddingTop: `${isAndroid && !actionBarHidden.value ? 0 : insets.value.top}`,
   paddingBottom: `${insets.value.bottom}`,
   paddingLeft: `${insets.value.left}`,
   paddingRight: `${insets.value.right}`
