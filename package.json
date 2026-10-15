@@ -1,6 +1,6 @@
 {
   "name": "nuxt-native",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Build real native Android and iOS apps with Nuxt and Vue — no WebView. A Flutter/React Native-style framework for the Nuxt ecosystem, powered by NativeScript's native runtime. Both platforms are verified on real hardware; see ARCHITECTURE.md for exactly what's been confirmed on-device.",
   "license": "MIT",
   "type": "module",

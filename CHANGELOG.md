@@ -6,6 +6,8 @@ whatever is on `main` when you install.
 
 ## Unreleased
 
+## 2.2.0 - 2026-10-15
+
 ### Added
 
 - `v-tap="handler"`: a tap handler for any view that counts every tap on Android,

@@ -27,6 +27,6 @@ export declare function useNativeRouter(): {
     back: (options?: NavigateBackOptions) => Promise<void>;
     canGoBack: () => boolean;
     /** Stack of route names navigated so far, most recent last. */
-    current: Readonly<import("nativescript-vue").Ref<readonly string[], readonly string[]>>;
+    current: Readonly<import("vue").Ref<readonly string[], readonly string[]>>;
 };
 export {};
