@@ -35,6 +35,7 @@ import NActionBar from './NActionBar.vue'
 // show the ActionBar on every page without a title (seen on a device: an
 // empty toolbar labelled with the app name above an untitled page).
 const props = withDefaults(defineProps<{ title?: string, scrollable?: boolean, hideActionBar?: boolean }>(), {
+  title: undefined,
   scrollable: true,
   hideActionBar: undefined
 })
