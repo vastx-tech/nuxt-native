@@ -59,8 +59,9 @@ test('Windows (CRLF) line endings work and are kept', () => {
 
 // Read exactly as checked out — normalizing line endings here first is what
 // hid the CRLF bug the first time.
-test('the real CHANGELOG.md, as checked out, has release notes and can be stamped', () => {
+// Only that it can be stamped: "Unreleased" is legitimately empty right after
+// a release, and the release script itself refuses to run when it is.
+test('the real CHANGELOG.md, as checked out, can be stamped', () => {
   const changelog = readFileSync(new URL('../../CHANGELOG.md', import.meta.url), 'utf8')
-  assert.notEqual(unreleasedNotes(changelog), '')
-  assert.doesNotThrow(() => stampChangelog(changelog, '9.9.9', '2026-01-01'))
+  assert.match(stampChangelog(changelog, '9.9.9', '2026-01-01'), /## Unreleased\r?\n\r?\n## 9\.9\.9 - 2026-01-01/)
 })

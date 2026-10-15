@@ -40,12 +40,18 @@ export function ensureAndroidTheme(projectRoot, theme) {
 
   const write = (rel, content) => {
     const path = join(res, rel)
-    if (existsSync(path) && !readFileSync(path, 'utf8').includes(MARKER)) {
+    const existing = existsSync(path) ? readFileSync(path, 'utf8') : undefined
+    if (existing !== undefined && !existing.includes(MARKER)) {
       skipped.push(rel)
       return
     }
+    // Same line endings as the file already has (CRLF on a Windows
+    // checkout), and no write at all when nothing changed — otherwise every
+    // build left whitespace-only diffs on these files.
+    const text = existing?.includes('\r\n') ? content.replace(/\n/g, '\r\n') : content
+    if (text === existing) return
     mkdirSync(dirname(path), { recursive: true })
-    writeFileSync(path, content)
+    writeFileSync(path, text)
   }
 
   const colors = `<?xml version="1.0" encoding="utf-8"?>

@@ -6,6 +6,18 @@ whatever is on `main` when you install.
 
 ## Unreleased
 
+### Added
+
+- `v-tap="handler"`: a tap handler for any view that counts every tap on Android,
+  with a ripple (`v-tap.noripple` for none). `@tap` on a layout or label drops a
+  quick second tap there. Registered globally and type-checked.
+
+### Fixed
+
+- Builds no longer leave whitespace-only changes in `App_Resources` on Windows.
+  `app.gradle` and the generated theme files keep their line endings, and aren't
+  rewritten when nothing changed.
+
 ## 2.1.0 - 2026-10-15
 
 Version 2.1.0 is the first tagged release, based on feedback from a developer

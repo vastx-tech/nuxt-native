@@ -190,6 +190,9 @@ ${templateProps}
   interface GlobalComponents {
 ${globalComponents}
   }
+  interface GlobalDirectives {
+    vTap: typeof import('nuxt-native/runtime/native-tap.js')['vTap']
+  }
 }
 ${pinia ? PINIA_PERSIST_TYPES : ''}`
 }

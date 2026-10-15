@@ -108,6 +108,7 @@ const props = withDefaults(defineProps<{
   inactiveColor?: string
   barColor?: string
 }>(), {
+  modelValue: undefined,
   position: 'bottom',
   lazy: true,
   backToFirst: true,

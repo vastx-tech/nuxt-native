@@ -30,7 +30,7 @@ import { computed, useSlots } from "vue";
 import { useSafeArea } from "../composables/useSafeArea";
 import NActionBar from "./NActionBar.vue";
 const props = defineProps({
-  title: { type: String, required: false },
+  title: { type: String, required: false, default: void 0 },
   scrollable: { type: Boolean, required: false, default: true },
   hideActionBar: { type: Boolean, required: false, default: void 0 }
 });

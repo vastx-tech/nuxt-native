@@ -29,14 +29,21 @@ export function ensureMarkedBlock(path, marker, block) {
     return
   }
 
+  // Written in the file's own line endings, and only when something changed:
+  // a Windows checkout has CRLF (git's autocrlf), and rewriting it with LF on
+  // every build left a whitespace-only diff on app.gradle after each one.
   const content = readFileSync(path, 'utf8')
+  const eol = content.includes('\r\n') ? '\r\n' : '\n'
+  const blockInEol = fullBlock.replace(/\n/g, eol)
   const startIdx = content.indexOf(startMarker)
   const endIdx = content.indexOf(endMarker)
+  let updated
   if (startIdx !== -1 && endIdx !== -1) {
     const before = content.slice(0, startIdx)
     const after = content.slice(endIdx + endMarker.length)
-    writeFileSync(path, before + fullBlock.trimEnd() + after)
+    updated = before + blockInEol.trimEnd() + after
   } else {
-    writeFileSync(path, content.trimEnd() + '\n\n' + fullBlock)
+    updated = content.trimEnd() + eol + eol + blockInEol
   }
+  if (updated !== content) writeFileSync(path, updated)
 }

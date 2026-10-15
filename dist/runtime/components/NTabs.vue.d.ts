@@ -62,6 +62,7 @@ declare const __VLS_component: import("vue").DefineComponent<__VLS_Props, {}, {}
     onChange?: ((name: string, index: number) => any) | undefined;
 }>, {
     position: "top" | "bottom";
+    modelValue: string;
     lazy: boolean;
     backToFirst: boolean;
     activeColor: string;

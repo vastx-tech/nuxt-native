@@ -90,8 +90,10 @@ screen behaves differently on the device than you expect.
   outer handler ignore a tap the inner one has just handled.
 - A quick second tap on a plain view is dropped. @tap on a layout or Label goes
   through Android's double-tap detection, which swallows a second tap within about
-  300 ms. Use NButton (or the native Button) for anything users tap repeatedly, such
-  as counters and steppers; both use Android's click listener and count every tap.
+  300 ms. For anything users tap repeatedly (counters, steppers, list rows, cards),
+  use NButton, or v-tap="handler" instead of @tap on any other view: both use
+  Android's click listener, count every tap, and add a ripple (v-tap.noripple for
+  none). Don't put @tap and v-tap on the same element.
 - Keep one stable child in a ScrollView. A ScrollView holds exactly one view, and
   replacing that child (v-if/v-else or a changing :key directly under the
   ScrollView) has crashed Android. Put one layout directly inside the ScrollView and

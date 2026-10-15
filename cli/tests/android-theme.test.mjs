@@ -124,3 +124,44 @@ test('the Gradle daemon is stopped after builds on small machines only, unless c
     rmSync(root, { recursive: true, force: true })
   }
 })
+
+test('marked blocks keep the file\'s line endings and skip unchanged writes', async () => {
+  const { ensureMarkedBlock } = await import('../lib/marked-block.mjs')
+  const { statSync, utimesSync } = await import('node:fs')
+  const root = mkdtempSync(join(tmpdir(), 'nuxt-native-block-'))
+  try {
+    const file = join(root, 'app.gradle')
+    writeFileSync(file, '// mine\r\nandroid {}\r\n')
+    ensureMarkedBlock(file, 'thing', 'a {\n  b 1\n}')
+    const once = readFileSync(file, 'utf8')
+    assert.doesNotMatch(once.replace(/\r\n/g, ''), /\n/, 'a CRLF file stays all-CRLF')
+    assert.match(once, /a \{\r\n {2}b 1\r\n\}/)
+
+    // A rerun with the same block (every build) leaves the file untouched.
+    const old = new Date('2020-01-01')
+    utimesSync(file, old, old)
+    ensureMarkedBlock(file, 'thing', 'a {\n  b 1\n}')
+    assert.equal(readFileSync(file, 'utf8'), once)
+    assert.equal(statSync(file).mtime.getTime(), old.getTime(), 'not rewritten')
+
+    ensureMarkedBlock(file, 'thing', 'a {\n  b 2\n}')
+    assert.match(readFileSync(file, 'utf8'), /b 2\r\n/)
+    assert.doesNotMatch(readFileSync(file, 'utf8'), /b 1/)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('regenerating the theme keeps CRLF files untouched', () => withProject((root, res) => {
+  ensureAndroidTheme(root, { background: '#0B1020' })
+  const crlf = readFileSync(res('values/styles.xml'), 'utf8').replace(/\n/g, '\r\n')
+  writeFileSync(res('values/styles.xml'), crlf) // as git checks it out on Windows
+  ensureAndroidTheme(root, { background: '#0B1020' })
+  assert.equal(readFileSync(res('values/styles.xml'), 'utf8'), crlf)
+  // A real change keeps the file's CRLF endings too.
+  writeFileSync(res('values/colors.xml'), readFileSync(res('values/colors.xml'), 'utf8').replace(/\n/g, '\r\n'))
+  ensureAndroidTheme(root, { background: '#111111' })
+  const colors = readFileSync(res('values/colors.xml'), 'utf8')
+  assert.match(colors, /#111111/)
+  assert.doesNotMatch(colors.replace(/\r\n/g, ''), /\n/)
+}))

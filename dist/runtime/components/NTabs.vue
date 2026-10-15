@@ -60,7 +60,7 @@ import { Application, Frame, isAndroid } from "@nativescript/core";
 import { colors, fontSizes } from "../theme";
 const props = defineProps({
   tabs: { type: Array, required: true },
-  modelValue: { type: String, required: false },
+  modelValue: { type: String, required: false, default: void 0 },
   position: { type: String, required: false, default: "bottom" },
   lazy: { type: Boolean, required: false, default: true },
   backToFirst: { type: Boolean, required: false, default: true },
