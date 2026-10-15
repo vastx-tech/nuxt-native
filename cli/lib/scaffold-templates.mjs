@@ -1,8 +1,14 @@
+import { readFileSync } from 'node:fs'
 import { ENTRY_FILE } from './generate-entry.mjs'
 
 // Until nuxt-native is published to npm, generated projects depend on it
-// straight from GitHub. Once it's published, this is the one line to change.
-export const NUXT_NATIVE_DEPENDENCY_SPEC = 'github:vastx-tech/nuxt-native'
+// straight from GitHub, pinned to the release tag of the nuxt-native that
+// created them (scripts/release.mjs tags every version as vX.Y.Z). Without
+// the tag, every install would take whatever is on main that day, so two
+// machines could build the same app with different framework code.
+// Once it's published to npm, this is the one line to change.
+const { version: NUXT_NATIVE_VERSION } = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'))
+export const NUXT_NATIVE_DEPENDENCY_SPEC = `github:vastx-tech/nuxt-native#v${NUXT_NATIVE_VERSION}`
 
 export function packageJson(appName, dependencySpec = NUXT_NATIVE_DEPENDENCY_SPEC, styling = 'native') {
   return `${JSON.stringify(

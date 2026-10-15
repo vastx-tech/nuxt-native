@@ -116,10 +116,28 @@ someone else's logo. Verified end-to-end from a clean directory via `npx`;
 the only step it can't do for you is provide an actual Android SDK / Xcode
 install — `ns platform add` will tell you clearly if either is missing.
 
+### Versions and updating
+
+Each release is a git tag (`v2.1.0`, ...) with notes on the
+[releases page](https://github.com/vastx-tech/nuxt-native/releases) and in
+[CHANGELOG.md](./CHANGELOG.md). `create` pins new projects to the release that
+created them: their package.json gets
+`"nuxt-native": "github:vastx-tech/nuxt-native#v2.1.0"`, so every machine builds
+with the same framework code. To update, change the tag and reinstall:
+
+```bash
+npm install github:vastx-tech/nuxt-native#v2.2.0
+npx nuxt-native init   # re-applies generated config for the new version
+```
+
+Check CHANGELOG.md's "Changed" section first; it lists anything that behaves
+differently. Installing without a tag (`github:vastx-tech/nuxt-native`) follows
+`main`, which can change on any merge.
+
 Adding it to an **existing** Nuxt project instead:
 
 ```bash
-npm install github:vastx-tech/nuxt-native nativescript-vue @nativescript/core
+npm install github:vastx-tech/nuxt-native#v2.1.0 nativescript-vue @nativescript/core
 ```
 
 ```ts
