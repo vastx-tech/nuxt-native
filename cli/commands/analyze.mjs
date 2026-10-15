@@ -1,5 +1,7 @@
 import { generateEntry } from '../lib/generate-entry.mjs'
 import { run } from '../lib/run.mjs'
+import { loadNativeConfig } from '../lib/load-config.mjs'
+import { stopGradleDaemonIfLowMemory } from '../lib/gradle-tuning.mjs'
 
 /**
  * `@nativescript/webpack` already ships webpack-bundle-analyzer support
@@ -15,7 +17,11 @@ export async function analyze(platform) {
   generateEntry({ pagesDir: 'app/pages' })
 
   console.log(`[nuxt-native] Building ${platform} with a bundle report ...`)
-  await run('npx', ['--yes', 'nativescript', 'build', platform, '--env.report'])
+  try {
+    await run('npx', ['--yes', 'nativescript', 'build', platform, '--env.report'])
+  } finally {
+    if (platform === 'android') stopGradleDaemonIfLowMemory(process.cwd(), (await loadNativeConfig()).android?.stopGradleDaemon)
+  }
 
   console.log(`
 [nuxt-native] Report written to:

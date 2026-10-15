@@ -2,6 +2,7 @@ import { generateEntry } from '../lib/generate-entry.mjs'
 import { loadNativeConfig } from '../lib/load-config.mjs'
 import { ensureProjectSetup } from '../lib/ensure-project-setup.mjs'
 import { run } from '../lib/run.mjs'
+import { stopGradleDaemonIfLowMemory } from '../lib/gradle-tuning.mjs'
 
 /**
  * `nsArgs` is forwarded verbatim to `ns run` — e.g. `--device <id>`,
@@ -28,5 +29,24 @@ export async function dev(platform, nsArgs = []) {
   // `ns run` builds, deploys to the connected device/simulator, and
   // LiveSyncs subsequent file changes — that hot-reload-to-device loop is
   // NativeScript's, not reimplemented here.
-  await run('npx', ['--yes', 'nativescript', 'run', platform, ...nsArgs])
+  // `ns run` usually ends with Ctrl+C, which would exit this process before
+  // a `finally` runs — so the daemon is also stopped from a SIGINT handler
+  // (once, whichever happens first).
+  let stopped = platform !== 'android'
+  const stopDaemon = () => {
+    if (stopped) return
+    stopped = true
+    stopGradleDaemonIfLowMemory(process.cwd(), config.android?.stopGradleDaemon)
+  }
+  const onInterrupt = () => {
+    stopDaemon()
+    process.exit(130)
+  }
+  process.once('SIGINT', onInterrupt)
+  try {
+    await run('npx', ['--yes', 'nativescript', 'run', platform, ...nsArgs])
+  } finally {
+    process.off('SIGINT', onInterrupt)
+    stopDaemon()
+  }
 }

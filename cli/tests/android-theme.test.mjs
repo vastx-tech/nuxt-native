@@ -99,3 +99,28 @@ test('platforms/android goes on PATH only when Windows skips the current directo
   assert.equal(childEnv('D:/app', { Path: 'C:/Windows' }, 'win32').Path, 'C:/Windows')
   assert.equal(childEnv('/app', { PATH: '/usr/bin', NoDefaultCurrentDirectoryInExePath: '1' }, 'darwin').PATH, '/usr/bin')
 })
+
+test('the Gradle daemon is stopped after builds on small machines only, unless configured', async () => {
+  const { stopGradleDaemonIfLowMemory } = await import('../lib/gradle-tuning.mjs')
+  const root = mkdtempSync(join(tmpdir(), 'nuxt-native-gradle-'))
+  try {
+    mkdirSync(join(root, 'platforms/android'), { recursive: true })
+    writeFileSync(join(root, 'platforms/android/gradlew.bat'), '')
+    writeFileSync(join(root, 'platforms/android/gradlew'), '')
+    const calls = []
+    const spawn = (...args) => { calls.push(args); return { status: 0 } }
+    const GB = 1024 ** 3
+
+    assert.equal(stopGradleDaemonIfLowMemory(root, undefined, { total: 8 * GB, platform: 'win32', spawn }), true)
+    assert.match(calls[0][0], /^".*gradlew\.bat" --stop$/)
+    assert.equal(calls[0][1].shell, true)
+    assert.equal(stopGradleDaemonIfLowMemory(root, undefined, { total: 32 * GB, platform: 'win32', spawn }), false)
+    assert.equal(stopGradleDaemonIfLowMemory(root, false, { total: 8 * GB, platform: 'win32', spawn }), false)
+    assert.equal(stopGradleDaemonIfLowMemory(root, true, { total: 32 * GB, platform: 'linux', spawn }), true)
+    assert.deepEqual(calls[1].slice(1, 2), [['--stop']])
+    assert.equal(calls.length, 2)
+    assert.equal(stopGradleDaemonIfLowMemory(join(root, 'missing'), true, { spawn }), false, 'no platforms/android yet')
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
