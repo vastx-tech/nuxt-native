@@ -6,6 +6,8 @@ whatever is on `main` when you install.
 
 ## Unreleased
 
+## 2.1.0 - 2026-10-15
+
 Version 2.1.0 is the first tagged release, based on feedback from a developer
 building a production app with nuxt-native.
 
