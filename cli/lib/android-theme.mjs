@@ -85,7 +85,9 @@ ${MARKER}
 
     <style name="NativeScriptToolbarStyleBase" parent="Widget.AppCompat.Toolbar">
         <item name="android:background">@color/ns_primary</item>
-        <item name="theme">@style/ThemeOverlay.AppCompat${dark ? '.Dark' : ''}.ActionBar</item>
+        <item name="theme">@style/ThemeOverlay.AppCompat${isDark(primary) ? '.Dark' : ''}.ActionBar</item>
+        <item name="titleTextColor">${isDark(primary) ? '#FFFFFF' : '#DE000000'}</item>
+        <item name="subtitleTextColor">${isDark(primary) ? '#B3FFFFFF' : '#8A000000'}</item>
         <item name="popupTheme">@style/ThemeOverlay.AppCompat${dark ? '.Dark' : ''}</item>
     </style>
 

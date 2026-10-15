@@ -35,6 +35,15 @@ test('a dark background gives a dark theme with that window background', () => w
 test('a light background keeps the light theme and dark status bar icons', () => withProject((root, res) => {
   ensureAndroidTheme(root, { background: '#F8FAFC' })
   assert.match(readFileSync(res('values/styles.xml'), 'utf8'), /parent="Theme\.AppCompat\.Light\.NoActionBar"/)
+  assert.match(readFileSync(res('values/styles.xml'), 'utf8'), /ThemeOverlay\.AppCompat\.ActionBar/)
+}))
+
+test('toolbar text contrasts with the toolbar colour, not the window', () => withProject((root, res) => {
+  // seen on a device: a dark primary toolbar on a light app had black title text
+  ensureAndroidTheme(root, { background: '#F8FAFC', primary: '#4F46E5' })
+  // NativeScript builds the Toolbar in code, so a `theme` overlay in its style
+  // is ignored; titleTextColor is what actually reaches the title.
+  assert.match(readFileSync(res('values/styles.xml'), 'utf8'), /titleTextColor">#FFFFFF/)
   assert.match(readFileSync(res('values-v23/styles.xml'), 'utf8'), /windowLightStatusBar">true/)
 }))
 

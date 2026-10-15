@@ -32,7 +32,7 @@ import NActionBar from "./NActionBar.vue";
 const props = defineProps({
   title: { type: String, required: false },
   scrollable: { type: Boolean, required: false, default: true },
-  hideActionBar: { type: Boolean, required: false }
+  hideActionBar: { type: Boolean, required: false, default: void 0 }
 });
 const slots = useSlots();
 const actionBarHidden = computed(() => props.hideActionBar ?? (!props.title && !slots.actionBar));

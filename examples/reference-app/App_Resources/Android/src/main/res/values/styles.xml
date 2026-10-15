@@ -16,7 +16,9 @@
 
     <style name="NativeScriptToolbarStyleBase" parent="Widget.AppCompat.Toolbar">
         <item name="android:background">@color/ns_primary</item>
-        <item name="theme">@style/ThemeOverlay.AppCompat.ActionBar</item>
+        <item name="theme">@style/ThemeOverlay.AppCompat.Dark.ActionBar</item>
+        <item name="titleTextColor">#FFFFFF</item>
+        <item name="subtitleTextColor">#B3FFFFFF</item>
         <item name="popupTheme">@style/ThemeOverlay.AppCompat</item>
     </style>
 
